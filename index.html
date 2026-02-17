@@ -267,6 +267,10 @@
     .foot-links a{font-size:14px;transition:color .2s}.foot-links a:hover{color:#5CE0D2}
     .foot-bottom{padding-top:28px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:13px}
 
+    /* ── Email Copy Tooltip ── */
+    .email-tooltip{position:fixed;background:#0A1E38;color:#5CE0D2;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;pointer-events:none;opacity:0;transition:opacity .3s;box-shadow:0 8px 30px rgba(0,0,0,.3)}
+    .email-tooltip.show{opacity:1}
+
     /* ── Responsive ── */
     @media(max-width:1024px){
       .hero-content{grid-template-columns:1fr}.hero-right{display:none}
@@ -728,6 +732,31 @@ document.addEventListener('mousemove',e=>{
   cards.forEach((c,i)=>{
     const f=[1,-.7,.8][i]||1;
     c.style.transform=`translate(${mx*f*15}px,${my*f*10}px)`;
+  });
+});
+
+// Email links — copy to clipboard + try mailto
+const tooltip=document.createElement('div');
+tooltip.className='email-tooltip';
+document.body.appendChild(tooltip);
+let tooltipTimer;
+
+document.querySelectorAll('a[href^="mailto:"]').forEach(link=>{
+  link.addEventListener('click',function(e){
+    e.preventDefault();
+    const href=this.getAttribute('href');
+    const email=href.replace('mailto:','').split('?')[0];
+    navigator.clipboard.writeText(email).then(()=>{
+      clearTimeout(tooltipTimer);
+      const rect=this.getBoundingClientRect();
+      tooltip.textContent='✓ '+email+' copied to clipboard!';
+      tooltip.style.left=rect.left+'px';
+      tooltip.style.top=(rect.top-48)+'px';
+      tooltip.classList.add('show');
+      tooltipTimer=setTimeout(()=>tooltip.classList.remove('show'),2500);
+    });
+    // Also try to open default mail client
+    window.location.href=href;
   });
 });
 </script>
