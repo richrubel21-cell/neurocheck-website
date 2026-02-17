@@ -6,8 +6,6 @@
 <title>NeuroCheck AI — Clinical Prototype</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.10.3/Recharts.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -30,783 +28,602 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);-webkit-font-smoo
 @keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes alertPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,82,82,.3)}50%{box-shadow:0 0 30px 10px rgba(255,82,82,.15)}}
-@keyframes scan{0%{top:-2px}100%{top:100%}}
 </style>
 </head>
 <body>
 <div id="root"></div>
-<script type="text/babel">
-const {useState,useEffect,useRef,useCallback} = React;
-const {LineChart,Line,AreaChart,Area,XAxis,YAxis,CartesianGrid,Tooltip,ResponsiveContainer,BarChart,Bar,Legend,ReferenceLine} = Recharts;
+<script>
+var e=React.createElement;
+var H=React.useState,E=React.useEffect,R=React.useRef,C=React.useCallback;
 
-// ═══════════════════════════════════════
-// DATA
-// ═══════════════════════════════════════
-const PATIENT = {name:'Margaret Chen',age:74,sex:'F',mrn:'HMC-7742901',bed:'Neuro ICU 4B',dx:'L MCA aneurysm clipping',hx:'HTN, T2DM, mild cognitive impairment',attending:'Dr. C. Bowers, MD',postOp:'Day 2',bmi:22.1,weight:'52kg',allergies:'PCN, Sulfa'};
+// ═══ DATA ═══
+var PAT={name:'Margaret Chen',age:74,sex:'F',mrn:'HMC-7742901',bed:'Neuro ICU 4B',dx:'L MCA aneurysm clipping',hx:'HTN, T2DM, mild cognitive impairment',att:'Dr. C. Bowers, MD'};
 
-const CN_TESTS = [
-  {id:'II',name:'Visual Acuity',prompt:'Look at the center point',desc:'Pupil response & visual tracking',action:'eyeCenter',dur:3200},
-  {id:'III',name:'Oculomotor',prompt:'Look UP',desc:'Superior rectus — upward gaze',action:'eyeUp',dur:2800},
-  {id:'IV',name:'Trochlear',prompt:'Look DOWN and IN',desc:'Superior oblique — downward gaze',action:'eyeDownIn',dur:2800},
-  {id:'V',name:'Trigeminal',prompt:'Clench your JAW',desc:'Masseter & temporalis activation',action:'jawClench',dur:3000},
-  {id:'VI',name:'Abducens',prompt:'Look LEFT — then RIGHT',desc:'Lateral rectus — horizontal tracking',action:'eyeLR',dur:3500},
-  {id:'VII',name:'Facial',prompt:'SMILE widely',desc:'Bilateral facial symmetry analysis',action:'smile',dur:3200},
-  {id:'IX',name:'Glossopharyngeal',prompt:'Say "AHHH"',desc:'Palatal elevation & phonation',action:'mouth',dur:2800},
-  {id:'X',name:'Vagus',prompt:'SWALLOW',desc:'Laryngeal movement tracking',action:'swallow',dur:2800},
-  {id:'XI',name:'Accessory',prompt:'Shrug SHOULDERS up',desc:'Trapezius / SCM contraction',action:'shrug',dur:3200},
-  {id:'XII',name:'Hypoglossal',prompt:'Stick out your TONGUE',desc:'Tongue protrusion & symmetry',action:'tongue',dur:3200},
+var CNT=[
+  {id:'II',name:'Visual Acuity',prompt:'Look at the center point',desc:'CN II — Pupil response & visual tracking',act:'eyeC',dur:3200},
+  {id:'III',name:'Oculomotor',prompt:'Look UP',desc:'CN III — Superior rectus, upward gaze',act:'eyeU',dur:2800},
+  {id:'IV',name:'Trochlear',prompt:'Look DOWN and IN',desc:'CN IV — Superior oblique, downward gaze',act:'eyeDI',dur:2800},
+  {id:'V',name:'Trigeminal',prompt:'Clench your JAW',desc:'CN V — Masseter & temporalis activation',act:'jaw',dur:3000},
+  {id:'VI',name:'Abducens',prompt:'Look LEFT — then RIGHT',desc:'CN VI — Lateral rectus, horizontal tracking',act:'eyeLR',dur:3500},
+  {id:'VII',name:'Facial',prompt:'SMILE widely',desc:'CN VII — Bilateral facial symmetry',act:'smile',dur:3200},
+  {id:'IX',name:'Glossopharyngeal',prompt:'Say "AHHH"',desc:'CN IX — Palatal elevation & phonation',act:'mouth',dur:2800},
+  {id:'X',name:'Vagus',prompt:'SWALLOW',desc:'CN X — Laryngeal movement tracking',act:'swall',dur:2800},
+  {id:'XI',name:'Accessory',prompt:'Shrug SHOULDERS up',desc:'CN XI — Trapezius / SCM contraction',act:'shrug',dur:3200},
+  {id:'XII',name:'Hypoglossal',prompt:'Stick out your TONGUE',desc:'CN XII — Tongue protrusion & symmetry',act:'tongue',dur:3200},
 ];
 
-const GCS_HISTORY = [
-  {day:'Day 0',gcs:11,e:3,v:3,m:5},{day:'Day 0.5',gcs:12,e:3,v:4,m:5},{day:'Day 1',gcs:13,e:4,v:4,m:5},
-  {day:'Day 1.5',gcs:14,e:4,v:4,m:6},{day:'Day 2',gcs:14,e:4,v:4,m:6},{day:'Day 2\n(now)',gcs:15,e:4,v:5,m:6},
-];
-const DELIRIUM_HISTORY = [
-  {day:'Day 0',cam:5,rass:-2},{day:'Day 0.5',cam:4,rass:-1},{day:'Day 1',cam:4,rass:-1},
-  {day:'Day 1.5',cam:3,rass:0},{day:'Day 2',cam:2,rass:0},{day:'Day 2\n(now)',cam:3,rass:-1},
-];
-const FRAILTY_HISTORY = [
-  {day:'Pre-Op',cfs:4,temp:9.2,grip:16.1},{day:'Day 0',cfs:6,temp:8.8,grip:12.4},
-  {day:'Day 1',cfs:5,temp:8.4,grip:13.8},{day:'Day 2\n(now)',cfs:5,temp:7.8,grip:14.2},
-];
-const ALERTS = [
-  {id:1,time:'14:32',severity:'high',title:'Delirium Score Increase',desc:'CAM-ICU-7 rose from 2→3. Inattention +1, altered consciousness detected. RASS shifted to -1.',action:'Notify attending. Consider reorientation protocol. Review sedation orders.',module:'CAM-ICU-7',value:'3/7'},
-  {id:2,time:'14:28',severity:'high',title:'Temporalis Wasting Below Threshold',desc:'Temporalis muscle thickness measured at 7.8mm, below 10mm sarcopenia threshold. Decline of 1.4mm since pre-op baseline.',action:'Nutrition consult. Consider protein supplementation. PT evaluation for strength program.',module:'Frailty',value:'7.8mm'},
-  {id:3,time:'14:25',severity:'medium',title:'Fall Risk Elevated',desc:'Hopkins Fall Risk Assessment Tool scored HIGH based on composite: CFS 5, grip strength 14.2kg (below 16kg threshold), gait instability observed.',action:'Fall precautions. Bed alarm. 1:1 sitter evaluation. PT clearance before ambulation.',module:'Frailty',value:'HIGH'},
-  {id:4,time:'09:15',severity:'low',title:'GCS Improvement Noted',desc:'GCS improved from 14 to 15 (verbal component 4→5). Patient oriented x3, following commands.',action:'Continue monitoring. Document improvement in progress note.',module:'GCS',value:'15/15'},
-  {id:5,time:'08:00',severity:'low',title:'CN Assessment Baseline Updated',desc:'All cranial nerves II-XII assessed intact. CN VII mild asymmetry resolved from Day 1. New baseline stored.',action:'No intervention required. Update UPI longitudinal record.',module:'CN Testing',value:'10/10'},
+var GCS_H=[{d:'Day 0',g:11},{d:'D0.5',g:12},{d:'Day 1',g:13},{d:'D1.5',g:14},{d:'Day 2',g:14},{d:'Now',g:15}];
+var DEL_H=[{d:'Day 0',c:5,r:-2},{d:'D0.5',c:4,r:-1},{d:'Day 1',c:4,r:-1},{d:'D1.5',c:3,r:0},{d:'Day 2',c:2,r:0},{d:'Now',c:3,r:-1}];
+var FR_H=[{d:'Pre-Op',f:4,t:9.2},{d:'Day 0',f:6,t:8.8},{d:'Day 1',f:5,t:8.4},{d:'Now',f:5,t:7.8}];
+
+var ALERTS=[
+  {id:1,time:'14:32',sev:'high',title:'Delirium Score Increase',desc:'CAM-ICU-7 rose from 2 to 3. Inattention +1, altered consciousness detected. RASS shifted to -1.',action:'Notify attending. Consider reorientation protocol. Review sedation orders.',mod:'CAM-ICU-7',val:'3/7'},
+  {id:2,time:'14:28',sev:'high',title:'Temporalis Wasting Below Threshold',desc:'Temporalis muscle thickness measured at 7.8mm, below 10mm sarcopenia threshold. Decline of 1.4mm since pre-op.',action:'Nutrition consult. Protein supplementation. PT evaluation for strength program.',mod:'Frailty',val:'7.8mm'},
+  {id:3,time:'14:25',sev:'med',title:'Fall Risk Elevated',desc:'Hopkins Fall Risk scored HIGH. Composite: CFS 5, grip 14.2kg (below 16kg threshold), gait instability.',action:'Fall precautions. Bed alarm. 1:1 sitter evaluation. PT clearance before ambulation.',mod:'Frailty',val:'HIGH'},
+  {id:4,time:'09:15',sev:'low',title:'GCS Improvement Noted',desc:'GCS improved 14 to 15 (verbal 4 to 5). Patient oriented x3, following commands.',action:'Continue monitoring. Document improvement in progress note.',mod:'GCS',val:'15/15'},
+  {id:5,time:'08:00',sev:'low',title:'CN Baseline Updated',desc:'All cranial nerves II-XII intact. CN VII mild asymmetry resolved from Day 1.',action:'No intervention. Update UPI longitudinal record.',mod:'CN Testing',val:'10/10'},
 ];
 
-// ═══════════════════════════════════════
-// FACE CANVAS — ELDERLY ICU PATIENT
-// ═══════════════════════════════════════
-function FaceCanvas({cnStep,phase,elapsed}){
-  const ref = useRef(null);
-  const frame = useRef(0);
+// ═══ SVG CHART COMPONENT ═══
+function MiniChart(props){
+  var data=props.data,dataKey=props.dataKey,color=props.color,w=props.width||320,h=props.height||140;
+  var labelKey=props.labelKey||'d';
+  var refLine=props.refLine,refLabel=props.refLabel,refColor=props.refColor||'#ff5252';
+  var data2Key=props.data2Key,color2=props.color2;
 
-  const draw = useCallback(()=>{
-    const c=ref.current; if(!c) return;
-    const X=c.getContext('2d');
-    const w=c.width,h=c.height;
-    frame.current++;
-    const t=frame.current;
+  var vals=data.map(function(d){return d[dataKey]});
+  var allVals=vals.slice();
+  if(data2Key) data.forEach(function(d){allVals.push(d[data2Key])});
+  var mn=Math.min.apply(null,allVals),mx=Math.max.apply(null,allVals);
+  if(refLine!==undefined){mn=Math.min(mn,refLine);mx=Math.max(mx,refLine);}
+  var pad=Math.max((mx-mn)*0.15,1);mn-=pad;mx+=pad;
+  var range=mx-mn||1;
 
-    // Face params based on current CN test
-    let eyeX=0,eyeY=0,mouthOpen=0,tongueOut=0,smile=0,jaw=0,shrug=0,brow=0;
-    const action = cnStep>=0 && cnStep<CN_TESTS.length ? CN_TESTS[cnStep].action : 'idle';
-    const prog = elapsed||0;
+  var px=50,pr=10,pt=10,pb=30;
+  var cw=w-px-pr,ch=h-pt-pb;
 
-    switch(action){
-      case 'eyeCenter': eyeX=0;eyeY=0; break;
-      case 'eyeUp': eyeY=-1; brow=0.3; break;
-      case 'eyeDownIn': eyeY=0.7;eyeX=0.3; break;
-      case 'jawClench': jaw=1; break;
-      case 'eyeLR': eyeX=Math.sin(t*0.08)*1; break;
-      case 'smile': smile=1; break;
-      case 'mouth': mouthOpen=0.7; break;
-      case 'swallow': {const p=(t%50)/50; brow=Math.sin(p*Math.PI)*0.2;} break;
-      case 'shrug': shrug=1; break;
-      case 'tongue': mouthOpen=0.4;tongueOut=1; break;
+  function xPos(i){return px+i*(cw/(data.length-1||1));}
+  function yPos(v){return pt+ch-(((v-mn)/range)*ch);}
+
+  // Build path
+  var pts=data.map(function(d,i){return xPos(i)+','+yPos(d[dataKey])});
+  var path='M'+pts.join('L');
+  var path2='';
+  if(data2Key){
+    var pts2=data.map(function(d,i){return xPos(i)+','+yPos(d[data2Key])});
+    path2='M'+pts2.join('L');
+  }
+
+  // Area fill
+  var area=path+'L'+xPos(data.length-1)+','+yPos(mn)+'L'+xPos(0)+','+yPos(mn)+'Z';
+
+  var els=[];
+  // Grid lines
+  var steps=5;
+  for(var i=0;i<=steps;i++){
+    var yv=mn+i*(range/steps);
+    var y=yPos(yv);
+    els.push(e('line',{key:'g'+i,x1:px,y1:y,x2:w-pr,y2:y,stroke:'#1a2640',strokeWidth:1}));
+    els.push(e('text',{key:'gt'+i,x:px-8,y:y+3,textAnchor:'end',fill:'#5a6a85',fontSize:9,fontFamily:'IBM Plex Mono'},Math.round(yv*10)/10));
+  }
+  // X labels
+  data.forEach(function(d,i){
+    els.push(e('text',{key:'xl'+i,x:xPos(i),y:h-5,textAnchor:'middle',fill:'#5a6a85',fontSize:8,fontFamily:'IBM Plex Mono'},d[labelKey]));
+  });
+  // Ref line
+  if(refLine!==undefined){
+    var ry=yPos(refLine);
+    els.push(e('line',{key:'ref',x1:px,y1:ry,x2:w-pr,y2:ry,stroke:refColor,strokeWidth:1,strokeDasharray:'4,3'}));
+    els.push(e('text',{key:'reft',x:w-pr,y:ry-5,textAnchor:'end',fill:refColor,fontSize:8,fontFamily:'IBM Plex Mono',fontWeight:600},refLabel||''));
+  }
+  // Area
+  els.push(e('path',{key:'area',d:area,fill:color,opacity:0.08}));
+  // Line
+  els.push(e('path',{key:'line',d:path,fill:'none',stroke:color,strokeWidth:2}));
+  // Dots
+  data.forEach(function(d,i){
+    els.push(e('circle',{key:'dot'+i,cx:xPos(i),cy:yPos(d[dataKey]),r:4,fill:color,stroke:'#0c1220',strokeWidth:2}));
+  });
+  // Second line
+  if(data2Key&&path2){
+    els.push(e('path',{key:'line2',d:path2,fill:'none',stroke:color2,strokeWidth:2,strokeDasharray:'6,3'}));
+    data.forEach(function(d,i){
+      els.push(e('circle',{key:'dot2'+i,cx:xPos(i),cy:yPos(d[data2Key]),r:3,fill:color2,stroke:'#0c1220',strokeWidth:2}));
+    });
+  }
+  return e('svg',{width:'100%',height:h,viewBox:'0 0 '+w+' '+h,style:{display:'block'}},els);
+}
+
+// Bar chart
+function BarChart2(props){
+  var data=props.data,w=props.width||340,h=props.height||140;
+  var px=50,pr=10,pt=10,pb=30;
+  var cw=w-px-pr,ch=h-pt-pb;
+  var mx=0;data.forEach(function(d){mx=Math.max(mx,d.b,d.c)});mx*=1.15;
+
+  var bw=cw/data.length;
+  var els=[];
+  // Grid
+  for(var i=0;i<=4;i++){
+    var y=pt+ch-i*(ch/4);
+    els.push(e('line',{key:'g'+i,x1:px,y1:y,x2:w-pr,y2:y,stroke:'#1a2640',strokeWidth:1}));
+    els.push(e('text',{key:'gt'+i,x:px-8,y:y+3,textAnchor:'end',fill:'#5a6a85',fontSize:9,fontFamily:'IBM Plex Mono'},Math.round(mx*i/4)));
+  }
+  data.forEach(function(d,i){
+    var x=px+i*bw+bw*0.15;
+    var barW=bw*0.3;
+    var h1=d.b/mx*ch,h2=d.c/mx*ch;
+    els.push(e('rect',{key:'b1'+i,x:x,y:pt+ch-h1,width:barW,height:h1,fill:'rgba(68,138,255,.4)',rx:3}));
+    els.push(e('rect',{key:'b2'+i,x:x+barW+2,y:pt+ch-h2,width:barW,height:h2,fill:'rgba(29,233,182,.5)',rx:3}));
+    els.push(e('text',{key:'bl'+i,x:px+i*bw+bw/2,y:h-5,textAnchor:'middle',fill:'#5a6a85',fontSize:8,fontFamily:'IBM Plex Mono'},d.m));
+  });
+  // Legend
+  els.push(e('rect',{key:'lb1',x:px,y:pt-2,width:10,height:10,fill:'rgba(68,138,255,.4)',rx:2}));
+  els.push(e('text',{key:'lt1',x:px+14,y:pt+7,fill:'#8e9bb8',fontSize:8,fontFamily:'IBM Plex Mono'},'Baseline'));
+  els.push(e('rect',{key:'lb2',x:px+75,y:pt-2,width:10,height:10,fill:'rgba(29,233,182,.5)',rx:2}));
+  els.push(e('text',{key:'lt2',x:px+89,y:pt+7,fill:'#8e9bb8',fontSize:8,fontFamily:'IBM Plex Mono'},'Current'));
+  return e('svg',{width:'100%',height:h,viewBox:'0 0 '+w+' '+h,style:{display:'block'}},els);
+}
+
+// ═══ FACE CANVAS ═══
+function FaceCanvas(props){
+  var cnStep=props.cnStep,phase=props.phase;
+  var ref=R(null),fr=R(0);
+
+  var draw=C(function(){
+    var c=ref.current;if(!c)return;
+    var X=c.getContext('2d');
+    var w=c.width,h=c.height;
+    fr.current++;var t=fr.current;
+    var act=cnStep>=0&&cnStep<CNT.length?CNT[cnStep].act:'idle';
+    var eyeX=0,eyeY=0,mouthOpen=0,tongueOut=0,smile=0,jaw=0,shrug=0,brow=0;
+
+    switch(act){
+      case'eyeC':eyeX=0;eyeY=0;break;
+      case'eyeU':eyeY=-1;brow=0.3;break;
+      case'eyeDI':eyeY=0.7;eyeX=0.3;break;
+      case'jaw':jaw=1;break;
+      case'eyeLR':eyeX=Math.sin(t*0.08);break;
+      case'smile':smile=1;break;
+      case'mouth':mouthOpen=0.7;break;
+      case'swall':brow=Math.sin((t%50)/50*Math.PI)*0.2;break;
+      case'shrug':shrug=1;break;
+      case'tongue':mouthOpen=0.4;tongueOut=1;break;
     }
 
     X.clearRect(0,0,w,h);
 
-    // ── ICU ROOM BACKGROUND ──
-    const bgG=X.createLinearGradient(0,0,0,h);
-    bgG.addColorStop(0,'#0a0f18');bgG.addColorStop(0.5,'#0d1420');bgG.addColorStop(1,'#060a10');
-    X.fillStyle=bgG;X.fillRect(0,0,w,h);
+    // ICU Background
+    var bg=X.createLinearGradient(0,0,0,h);
+    bg.addColorStop(0,'#0a0f18');bg.addColorStop(0.5,'#0d1420');bg.addColorStop(1,'#060a10');
+    X.fillStyle=bg;X.fillRect(0,0,w,h);
 
-    // Ceiling tiles
-    X.strokeStyle='rgba(255,255,255,0.015)';X.lineWidth=1;
-    for(let i=0;i<w;i+=80){X.beginPath();X.moveTo(i,0);X.lineTo(i,h*0.15);X.stroke();}
-
-    // IV Pole (left side)
+    // IV Pole
     X.strokeStyle='rgba(180,190,210,0.25)';X.lineWidth=2;
     X.beginPath();X.moveTo(w*0.12,h*0.1);X.lineTo(w*0.12,h*0.85);X.stroke();
-    // IV bag
-    X.fillStyle='rgba(100,180,255,0.12)';
-    X.fillRect(w*0.09,h*0.08,w*0.06,h*0.1);
+    X.fillStyle='rgba(100,180,255,0.12)';X.fillRect(w*0.09,h*0.08,w*0.06,h*0.1);
     X.strokeStyle='rgba(100,180,255,0.25)';X.strokeRect(w*0.09,h*0.08,w*0.06,h*0.1);
-    // IV line
     X.strokeStyle='rgba(100,180,255,0.15)';X.lineWidth=1;
     X.beginPath();X.moveTo(w*0.12,h*0.18);X.quadraticCurveTo(w*0.2,h*0.3,w*0.35,h*0.55);X.stroke();
 
-    // Monitor (right side)
-    X.fillStyle='rgba(15,25,40,0.8)';
-    X.fillRect(w*0.78,h*0.05,w*0.18,h*0.22);
-    X.strokeStyle='rgba(29,233,182,0.2)';X.lineWidth=1;
-    X.strokeRect(w*0.78,h*0.05,w*0.18,h*0.22);
-    // Heart rate line
+    // Monitor
+    X.fillStyle='rgba(15,25,40,0.8)';X.fillRect(w*0.78,h*0.05,w*0.18,h*0.22);
+    X.strokeStyle='rgba(29,233,182,0.2)';X.lineWidth=1;X.strokeRect(w*0.78,h*0.05,w*0.18,h*0.22);
     X.strokeStyle='rgba(29,233,182,0.5)';X.lineWidth=1.5;X.beginPath();
-    for(let i=0;i<30;i++){
-      const px=w*0.79+i*(w*0.16/30);
-      const py=h*0.12+Math.sin((i+t*0.5)*0.5)*8+(i===15?-20:i===16?15:0);
-      i===0?X.moveTo(px,py):X.lineTo(px,py);
-    }
+    for(var i=0;i<30;i++){var px=w*0.79+i*(w*0.16/30);var py=h*0.12+Math.sin((i+t*0.5)*0.5)*8+(i===15?-20:i===16?15:0);i===0?X.moveTo(px,py):X.lineTo(px,py);}
     X.stroke();
-    // HR number
-    X.font='bold 14px "IBM Plex Mono"';X.fillStyle='rgba(29,233,182,0.7)';
-    X.fillText('HR 72',w*0.8,h*0.22);
+    X.font='bold 14px IBM Plex Mono';X.fillStyle='rgba(29,233,182,0.7)';X.fillText('HR 72',w*0.8,h*0.22);
     X.fillStyle='rgba(255,171,64,0.6)';X.fillText('SpO2 97%',w*0.87,h*0.22);
 
-    // Bed rails (subtle)
+    // Bed rails
     X.strokeStyle='rgba(150,160,180,0.12)';X.lineWidth=3;
     X.beginPath();X.moveTo(w*0.2,h*0.75);X.lineTo(w*0.2,h*0.95);X.stroke();
     X.beginPath();X.moveTo(w*0.8,h*0.75);X.lineTo(w*0.8,h*0.95);X.stroke();
 
     // Pillow
-    X.beginPath();
-    X.ellipse(w/2,h*0.62,w*0.22,h*0.08,0,0,Math.PI*2);
+    X.beginPath();X.ellipse(w/2,h*0.62,w*0.22,h*0.08,0,0,Math.PI*2);
     X.fillStyle='rgba(200,210,220,0.08)';X.fill();
-    X.strokeStyle='rgba(200,210,220,0.06)';X.stroke();
 
-    // Hospital wristband glow (on right wrist area)
-    X.fillStyle='rgba(255,255,255,0.04)';
-    X.fillRect(w*0.62,h*0.72,w*0.04,h*0.015);
+    var cx=w/2,cy=h/2-h*0.04;
+    var sc=Math.min(w/800,h/600)*0.95;
+    X.save();X.translate(cx,cy);X.scale(sc,sc);
+    X.translate(0,Math.sin(t*0.015)*2);
 
-    // ── DRAW ELDERLY FACE ──
-    const cx=w/2, cy=h/2-h*0.04;
-    const sc=Math.min(w/800,h/600)*0.95;
-
-    X.save();
-    X.translate(cx,cy);
-    X.scale(sc,sc);
-
-    // Breathing
-    const breathY=Math.sin(t*0.015)*2;
-    X.translate(0,breathY);
-
-    // ── Shoulders + hospital gown ──
-    const shY=195-shrug*22;
+    // Shoulders + gown
+    var shY=195-shrug*22;
     X.beginPath();X.moveTo(-155,shY+35);X.quadraticCurveTo(-115,shY,0,shY-8);X.quadraticCurveTo(115,shY,155,shY+35);
     X.lineTo(155,290);X.lineTo(-155,290);X.closePath();
-    const gownG=X.createLinearGradient(0,shY,0,290);
-    gownG.addColorStop(0,'#4a6a7a');gownG.addColorStop(1,'#2a4a5a');
-    X.fillStyle=gownG;X.fill();
-    // Gown pattern (subtle hospital pattern)
+    var gG=X.createLinearGradient(0,shY,0,290);gG.addColorStop(0,'#4a6a7a');gG.addColorStop(1,'#2a4a5a');
+    X.fillStyle=gG;X.fill();
     X.strokeStyle='rgba(255,255,255,0.03)';X.lineWidth=0.5;
-    for(let i=-150;i<160;i+=12){X.beginPath();X.moveTo(i,shY);X.lineTo(i,290);X.stroke();}
+    for(var i=-150;i<160;i+=12){X.beginPath();X.moveTo(i,shY);X.lineTo(i,290);X.stroke();}
 
-    // Neck (thinner, elderly)
+    // Neck
     X.beginPath();X.moveTo(-25,148);X.lineTo(-28,shY);X.lineTo(28,shY);X.lineTo(25,148);X.closePath();
     X.fillStyle='#c49a70';X.fill();
-    // Neck wrinkles
     X.strokeStyle='rgba(0,0,0,0.08)';X.lineWidth=0.8;
-    for(let i=0;i<3;i++){X.beginPath();X.moveTo(-20,155+i*12);X.quadraticCurveTo(0,158+i*12,20,155+i*12);X.stroke();}
+    for(var i=0;i<3;i++){X.beginPath();X.moveTo(-20,155+i*12);X.quadraticCurveTo(0,158+i*12,20,155+i*12);X.stroke();}
 
-    // ── Head — elderly proportions (slightly sunken) ──
-    X.beginPath();
-    X.ellipse(0,0,98,125,0,0,Math.PI*2);
-    const skinG=X.createRadialGradient(-15,-15,8,0,0,125);
-    skinG.addColorStop(0,'#dbb890');skinG.addColorStop(0.5,'#c9a578');skinG.addColorStop(1,'#b08e60');
-    X.fillStyle=skinG;X.fill();
+    // Head
+    X.beginPath();X.ellipse(0,0,98,125,0,0,Math.PI*2);
+    var sG=X.createRadialGradient(-15,-15,8,0,0,125);sG.addColorStop(0,'#dbb890');sG.addColorStop(0.5,'#c9a578');sG.addColorStop(1,'#b08e60');
+    X.fillStyle=sG;X.fill();
 
-    // Cheek hollowing (elderly sunken cheeks)
-    X.beginPath();X.ellipse(-65,25,18,30,0.2,0,Math.PI*2);
-    X.fillStyle='rgba(160,120,80,0.15)';X.fill();
-    X.beginPath();X.ellipse(65,25,18,30,-0.2,0,Math.PI*2);
-    X.fillStyle='rgba(160,120,80,0.15)';X.fill();
+    // Sunken cheeks
+    X.beginPath();X.ellipse(-65,25,18,30,0.2,0,Math.PI*2);X.fillStyle='rgba(160,120,80,0.15)';X.fill();
+    X.beginPath();X.ellipse(65,25,18,30,-0.2,0,Math.PI*2);X.fillStyle='rgba(160,120,80,0.15)';X.fill();
 
-    // ── Hair — thin, gray ──
-    X.beginPath();X.ellipse(0,-52,105,85,0,Math.PI,Math.PI*2);
-    X.fillStyle='#8a8a8a';X.fill();
-    // Thinning effect
-    for(let i=0;i<40;i++){
-      X.beginPath();
-      const angle=Math.PI+Math.random()*Math.PI;
-      const r=85+Math.random()*15;
-      X.moveTo(Math.cos(angle)*90,-52+Math.sin(angle)*r*0.3);
-      X.lineTo(Math.cos(angle)*(90+Math.random()*20),-52+Math.sin(angle)*(r*0.3+Math.random()*15));
-      X.strokeStyle=`rgba(${150+Math.random()*50},${150+Math.random()*50},${155+Math.random()*50},${0.3+Math.random()*0.3})`;
-      X.lineWidth=1+Math.random();X.stroke();
-    }
-    // Side hair
+    // Gray hair
+    X.beginPath();X.ellipse(0,-52,105,85,0,Math.PI,Math.PI*2);X.fillStyle='#8a8a8a';X.fill();
+    for(var i=0;i<30;i++){X.beginPath();var a=Math.PI+Math.random()*Math.PI;X.moveTo(Math.cos(a)*90,-52+Math.sin(a)*25);
+    X.lineTo(Math.cos(a)*(90+Math.random()*20),-52+Math.sin(a)*25+Math.random()*15);
+    X.strokeStyle='rgba(160,160,165,'+(0.3+Math.random()*0.3)+')';X.lineWidth=1+Math.random();X.stroke();}
     X.beginPath();X.ellipse(-100,-5,15,55,0.2,0,Math.PI*2);X.fillStyle='#7a7a7a';X.fill();
     X.beginPath();X.ellipse(100,-5,15,55,-0.2,0,Math.PI*2);X.fillStyle='#7a7a7a';X.fill();
 
-    // ── Forehead wrinkles ──
+    // Forehead wrinkles
     X.strokeStyle='rgba(0,0,0,0.07)';X.lineWidth=0.8;
-    for(let i=0;i<4;i++){
-      X.beginPath();
-      X.moveTo(-55,-85+i*10);X.quadraticCurveTo(0,-83+i*10+Math.sin(i)*3,55,-85+i*10);X.stroke();
-    }
+    for(var i=0;i<4;i++){X.beginPath();X.moveTo(-55,-85+i*10);X.quadraticCurveTo(0,-83+i*10,55,-85+i*10);X.stroke();}
 
-    // ── Ears ──
-    [-1,1].forEach(s=>{
-      X.beginPath();X.ellipse(s*95,10,14,26,s*0.1,0,Math.PI*2);
-      X.fillStyle='#c49a70';X.fill();X.strokeStyle='rgba(0,0,0,0.08)';X.lineWidth=1;X.stroke();
-    });
+    // Ears
+    [-1,1].forEach(function(s){X.beginPath();X.ellipse(s*95,10,14,26,s*0.1,0,Math.PI*2);X.fillStyle='#c49a70';X.fill();});
 
-    // ── TEMPORALIS REGION — measurement overlay ──
-    if(action==='jawClench' || phase==='frailty'){
-      [-1,1].forEach(s=>{
-        // Temporalis muscle area highlight
+    // Temporalis measurement
+    if(act==='jaw'||phase==='frailty'){
+      [-1,1].forEach(function(s){
         X.beginPath();X.ellipse(s*88,-20,22,35,s*0.15,0,Math.PI*2);
         X.fillStyle='rgba(255,171,64,0.12)';X.fill();
         X.strokeStyle='rgba(255,171,64,0.6)';X.lineWidth=1.5;X.setLineDash([4,3]);X.stroke();X.setLineDash([]);
-        // Measurement line
         X.strokeStyle='rgba(255,82,82,0.8)';X.lineWidth=1.5;
         X.beginPath();X.moveTo(s*75,-35);X.lineTo(s*100,-35);X.stroke();
         X.beginPath();X.moveTo(s*75,-35);X.lineTo(s*75,-30);X.stroke();
         X.beginPath();X.moveTo(s*100,-35);X.lineTo(s*100,-30);X.stroke();
-        // Measurement label
-        X.font='bold 9px "IBM Plex Mono"';
-        X.fillStyle='rgba(255,82,82,0.9)';
+        X.font='bold 9px IBM Plex Mono';X.fillStyle='rgba(255,82,82,0.9)';
         X.fillText('7.8mm',s>0?78:-110,-40);
-        X.font='7px "IBM Plex Mono"';
-        X.fillStyle='rgba(255,171,64,0.7)';
+        X.font='7px IBM Plex Mono';X.fillStyle='rgba(255,171,64,0.7)';
         X.fillText('TEMPORALIS',s>0?76:-110,-50);
       });
     }
 
-    // ── Eyebrows (thinner, graying) ──
-    const browY=-58-brow*10;
-    [-1,1].forEach(s=>{
-      X.beginPath();X.moveTo(s*16,browY);X.quadraticCurveTo(s*42,browY-7-brow*4,s*65,browY+5);
-      X.strokeStyle='#7a7a7a';X.lineWidth=2.5;X.lineCap='round';X.stroke();
-    });
+    // Eyebrows
+    var browY=-58-brow*10;
+    [-1,1].forEach(function(s){X.beginPath();X.moveTo(s*16,browY);X.quadraticCurveTo(s*42,browY-7-brow*4,s*65,browY+5);X.strokeStyle='#7a7a7a';X.lineWidth=2.5;X.lineCap='round';X.stroke();});
 
-    // ── Eyes (slightly droopy, aged) ──
-    const eyeBaseY=-28;
-    [-1,1].forEach(s=>{
-      const ex=s*40;
-      // Slight droop on upper eyelid
-      X.beginPath();X.ellipse(ex,eyeBaseY,24,16,0,0,Math.PI*2);
-      X.fillStyle='#ede8e0';X.fill();
-      // Upper eyelid droop
-      X.beginPath();X.ellipse(ex,eyeBaseY-3,25,10,0,Math.PI,Math.PI*2);
-      X.fillStyle='#c49a70';X.fill();
-      // Crow's feet wrinkles
+    // Eyes
+    var eY=-28;
+    [-1,1].forEach(function(s){
+      var ex=s*40;
+      X.beginPath();X.ellipse(ex,eY,24,16,0,0,Math.PI*2);X.fillStyle='#ede8e0';X.fill();
+      X.beginPath();X.ellipse(ex,eY-3,25,10,0,Math.PI,Math.PI*2);X.fillStyle='#c49a70';X.fill();
+      // Crow's feet
       X.strokeStyle='rgba(0,0,0,0.06)';X.lineWidth=0.6;
-      for(let i=0;i<3;i++){
-        X.beginPath();X.moveTo(ex+s*24,eyeBaseY-5+i*5);
-        X.lineTo(ex+s*(30+i*4),eyeBaseY-8+i*6);X.stroke();
-      }
+      for(var i=0;i<3;i++){X.beginPath();X.moveTo(ex+s*24,eY-5+i*5);X.lineTo(ex+s*(30+i*4),eY-8+i*6);X.stroke();}
       // Iris
-      const ix=ex+eyeX*10, iy=eyeBaseY+eyeY*7;
+      var ix=ex+eyeX*10,iy=eY+eyeY*7;
       X.beginPath();X.arc(ix,iy,10,0,Math.PI*2);
-      const iG=X.createRadialGradient(ix-1,iy-1,1,ix,iy,10);
-      iG.addColorStop(0,'#6a8a5a');iG.addColorStop(0.7,'#4a6a3a');iG.addColorStop(1,'#2a4a1a');
+      var iG=X.createRadialGradient(ix-1,iy-1,1,ix,iy,10);iG.addColorStop(0,'#6a8a5a');iG.addColorStop(1,'#2a4a1a');
       X.fillStyle=iG;X.fill();
-      // Pupil
       X.beginPath();X.arc(ix,iy,4.5,0,Math.PI*2);X.fillStyle='#0a0a0a';X.fill();
       X.beginPath();X.arc(ix-2,iy-2,2,0,Math.PI*2);X.fillStyle='rgba(255,255,255,0.7)';X.fill();
-      // Under-eye bags
-      X.beginPath();X.ellipse(ex,eyeBaseY+14,18,5,0,0,Math.PI);
-      X.fillStyle='rgba(120,90,70,0.12)';X.fill();
-      // Eye outline
-      X.beginPath();X.ellipse(ex,eyeBaseY,24,16,0,0,Math.PI*2);
-      X.strokeStyle='rgba(0,0,0,0.1)';X.lineWidth=1;X.stroke();
+      // Under-eye
+      X.beginPath();X.ellipse(ex,eY+14,18,5,0,0,Math.PI);X.fillStyle='rgba(120,90,70,0.12)';X.fill();
+      X.beginPath();X.ellipse(ex,eY,24,16,0,0,Math.PI*2);X.strokeStyle='rgba(0,0,0,0.1)';X.lineWidth=1;X.stroke();
     });
 
-    // ── Nose (slightly larger, aged) ──
+    // Nose
     X.beginPath();X.moveTo(-2,-12);X.quadraticCurveTo(-4,22,-16,38);X.quadraticCurveTo(0,45,16,38);X.quadraticCurveTo(4,22,2,-12);
     X.strokeStyle='rgba(0,0,0,0.08)';X.lineWidth=1.2;X.stroke();
-    X.beginPath();X.ellipse(-8,38,5.5,4,0.3,0,Math.PI*2);X.fillStyle='rgba(160,120,80,0.2)';X.fill();
-    X.beginPath();X.ellipse(8,38,5.5,4,-0.3,0,Math.PI*2);X.fillStyle='rgba(160,120,80,0.2)';X.fill();
+    // Nasolabial
+    [-1,1].forEach(function(s){X.beginPath();X.moveTo(s*18,30);X.quadraticCurveTo(s*28,50,s*22,72);X.strokeStyle='rgba(0,0,0,0.08)';X.lineWidth=1;X.stroke();});
 
-    // Nasolabial folds (deep, elderly)
-    X.strokeStyle='rgba(0,0,0,0.08)';X.lineWidth=1;
-    [-1,1].forEach(s=>{
-      X.beginPath();X.moveTo(s*18,30);X.quadraticCurveTo(s*28,50,s*22,72);X.stroke();
-    });
-
-    // ── Mouth ──
-    const mY=72;
-    const mW=32+smile*8;
-    const mH=2+mouthOpen*28;
-    const smC=smile*12;
-
+    // Mouth
+    var mY=72,mW=32+smile*8,mH=2+mouthOpen*28;
     if(mouthOpen>0.05){
-      // Open mouth
       X.beginPath();X.ellipse(0,mY+mH*0.4,mW*0.8,mH*0.5,0,0,Math.PI*2);X.fillStyle='#1a0808';X.fill();
-      // Upper lip
-      X.beginPath();X.moveTo(-mW,mY);X.quadraticCurveTo(-mW*0.5,mY-6-smC,0,mY-3);
-      X.quadraticCurveTo(mW*0.5,mY-6-smC,mW,mY);X.quadraticCurveTo(mW*0.5,mY+mH*0.3,0,mY+mH*0.2);
-      X.quadraticCurveTo(-mW*0.5,mY+mH*0.3,-mW,mY);
+      X.beginPath();X.moveTo(-mW,mY);X.quadraticCurveTo(-mW*0.5,mY-6-smile*12,0,mY-3);X.quadraticCurveTo(mW*0.5,mY-6-smile*12,mW,mY);
+      X.quadraticCurveTo(mW*0.5,mY+mH*0.3,0,mY+mH*0.2);X.quadraticCurveTo(-mW*0.5,mY+mH*0.3,-mW,mY);
       X.fillStyle='#b06060';X.fill();
-      // Teeth
       if(mouthOpen>0.2){X.fillStyle='#e8e4d8';X.fillRect(-mW*0.5,mY+1,mW,Math.min(mH*0.2,8));}
-      // Lower lip
-      X.beginPath();X.moveTo(-mW+3,mY+mH*0.6);X.quadraticCurveTo(0,mY+mH+2,mW-3,mY+mH*0.6);
-      X.fillStyle='#a05555';X.fill();
-    } else {
-      // Closed mouth with smile
-      X.beginPath();X.moveTo(-mW,mY);X.quadraticCurveTo(0,mY+3+smC,mW,mY);
+    }else{
+      X.beginPath();X.moveTo(-mW,mY);X.quadraticCurveTo(0,mY+3+smile*12,mW,mY);
       X.strokeStyle='#a06060';X.lineWidth=2.5;X.lineCap='round';X.stroke();
     }
-
     // Tongue
     if(tongueOut>0.1){
-      const tL=tongueOut*32;
-      X.beginPath();X.ellipse(0,mY+mH+tL*0.4,13,tL*0.55,0,0,Math.PI*2);
+      X.beginPath();X.ellipse(0,mY+mH+tongueOut*12,13,tongueOut*18,0,0,Math.PI*2);
       X.fillStyle='#d87070';X.fill();X.strokeStyle='#c06060';X.lineWidth=1;X.stroke();
-      X.beginPath();X.moveTo(0,mY+mH);X.lineTo(0,mY+mH+tL*0.8);
-      X.strokeStyle='rgba(0,0,0,0.08)';X.lineWidth=0.8;X.stroke();
     }
-
-    // Jaw clench
-    if(jaw>0.1){
-      [-1,1].forEach(s=>{
-        X.beginPath();X.ellipse(s*85,18,7+jaw*5,18,s*0.2,0,Math.PI*2);
-        X.fillStyle=`rgba(200,160,100,${jaw*0.25})`;X.fill();
-      });
-    }
-
+    // Jaw
+    if(jaw>0.1){[-1,1].forEach(function(s){X.beginPath();X.ellipse(s*85,18,7+jaw*5,18,s*0.2,0,Math.PI*2);X.fillStyle='rgba(200,160,100,'+jaw*0.25+')';X.fill();});}
     // Age spots
-    [[30,-70,3],[62,5,2.5],[-55,40,2],[-30,90,2.5],[45,85,2]].forEach(([sx,sy,sr])=>{
-      X.beginPath();X.arc(sx,sy,sr,0,Math.PI*2);
-      X.fillStyle='rgba(140,100,60,0.15)';X.fill();
-    });
+    [[30,-70,3],[62,5,2.5],[-55,40,2],[-30,90,2.5],[45,85,2]].forEach(function(a){X.beginPath();X.arc(a[0],a[1],a[2],0,Math.PI*2);X.fillStyle='rgba(140,100,60,0.15)';X.fill();});
 
-    // ══ AI TRACKING OVERLAYS ══
-    // Mesh grid
+    // ── AI Overlays ──
     X.globalAlpha=0.06;X.strokeStyle='#1de9b6';X.lineWidth=0.4;
-    for(let i=-7;i<=7;i++){
-      X.beginPath();X.moveTo(i*15,-135);X.lineTo(i*15,155);X.stroke();
-      X.beginPath();X.moveTo(-110,i*20);X.lineTo(110,i*20);X.stroke();
-    }
+    for(var i=-7;i<=7;i++){X.beginPath();X.moveTo(i*15,-135);X.lineTo(i*15,155);X.stroke();X.beginPath();X.moveTo(-110,i*20);X.lineTo(110,i*20);X.stroke();}
     X.globalAlpha=1;
-
-    // Face oval
-    X.beginPath();X.ellipse(0,0,103,130,0,0,Math.PI*2);
-    X.strokeStyle='rgba(29,233,182,0.4)';X.lineWidth=1.5;X.setLineDash([6,4]);X.stroke();X.setLineDash([]);
-
-    // Eye boxes
-    [-1,1].forEach(s=>{
-      X.strokeStyle='rgba(68,138,255,0.5)';X.lineWidth=1;
-      X.strokeRect(s*40-28,-48,56,40);
-      X.beginPath();X.arc(s*40+eyeX*10,-28+eyeY*7,13,0,Math.PI*2);
-      X.strokeStyle='rgba(179,136,255,0.6)';X.lineWidth=1.2;X.stroke();
+    X.beginPath();X.ellipse(0,0,103,130,0,0,Math.PI*2);X.strokeStyle='rgba(29,233,182,0.4)';X.lineWidth=1.5;X.setLineDash([6,4]);X.stroke();X.setLineDash([]);
+    [-1,1].forEach(function(s){X.strokeStyle='rgba(68,138,255,0.5)';X.lineWidth=1;X.strokeRect(s*40-28,-48,56,40);
+      X.beginPath();X.arc(s*40+eyeX*10,-28+eyeY*7,13,0,Math.PI*2);X.strokeStyle='rgba(179,136,255,0.6)';X.lineWidth=1.2;X.stroke();});
+    X.strokeStyle='rgba(255,82,82,0.4)';X.lineWidth=1;X.strokeRect(-45,57,90,45+mouthOpen*28);
+    // Landmarks
+    [[0,-125],[0,130],[-98,0],[98,0],[-40,-28],[40,-28],[0,38],[0,72+mouthOpen*14],[-70,18],[70,18],[0,-58]].forEach(function(l){
+      X.beginPath();X.arc(l[0],l[1],2.5,0,Math.PI*2);X.fillStyle='rgba(29,233,182,0.8)';X.fill();
     });
-
-    // Mouth box
-    X.strokeStyle='rgba(255,82,82,0.4)';X.lineWidth=1;
-    X.strokeRect(-45,57,90,45+mouthOpen*28);
-
-    // Landmark dots
-    const lm=[[0,-125],[0,130],[-98,0],[98,0],[-40,-28],[40,-28],[0,38],[0,72+mouthOpen*14],
-      [-40+eyeX*10,-28+eyeY*7],[40+eyeX*10,-28+eyeY*7],[-70,18],[70,18],[0,-58],
-      [-85,shY-5],[85,shY-5]];
-    lm.forEach(([lx,ly])=>{
-      X.beginPath();X.arc(lx,ly,2.5,0,Math.PI*2);X.fillStyle='rgba(29,233,182,0.8)';X.fill();
-      X.beginPath();X.arc(lx,ly,5,0,Math.PI*2);X.strokeStyle='rgba(29,233,182,0.2)';X.lineWidth=0.8;X.stroke();
-    });
-
-    // Data readouts
-    X.font='8px "IBM Plex Mono"';X.fillStyle='rgba(29,233,182,0.5)';
-    X.fillText('EYE_L',-70,-52);X.fillText('EYE_R',18,-52);
-    X.fillText(`IRIS: ${(eyeX*10).toFixed(1)},${(eyeY*7).toFixed(1)}`,-100,-10);
-    X.fillText(`MOUTH: ${mouthOpen.toFixed(2)}`,50,65);
-    if(tongueOut>0.1) X.fillText(`TONGUE: ${tongueOut.toFixed(2)}`,50,80);
-    if(jaw>0.1) X.fillText(`JAW: ${jaw.toFixed(2)}`,-100,25);
-    if(shrug>0.1) X.fillText(`SHRUG: ${shrug.toFixed(2)}`,-110,shY-15);
-
-    // Scan line effect
-    const scanY=((t*2)%400)-200;
-    X.strokeStyle='rgba(29,233,182,0.06)';X.lineWidth=40;
-    X.beginPath();X.moveTo(-120,scanY);X.lineTo(120,scanY);X.stroke();
+    // Readouts
+    X.font='8px IBM Plex Mono';X.fillStyle='rgba(29,233,182,0.5)';
+    X.fillText('IRIS: '+eyeX.toFixed(1)+','+eyeY.toFixed(1),-100,-10);
+    X.fillText('MOUTH: '+mouthOpen.toFixed(2),50,65);
 
     X.restore();
     requestAnimationFrame(draw);
-  },[cnStep,phase,elapsed]);
+  },[cnStep,phase]);
 
-  useEffect(()=>{
-    const c=ref.current;if(!c)return;
-    const p=c.parentElement;
-    c.width=p.clientWidth;c.height=p.clientHeight;
-    const ro=new ResizeObserver(()=>{c.width=p.clientWidth;c.height=p.clientHeight;});
-    ro.observe(p);
-    draw();
-    return()=>ro.disconnect();
+  E(function(){
+    var c=ref.current;if(!c)return;
+    var p=c.parentElement;c.width=p.clientWidth;c.height=p.clientHeight;
+    var ro=new ResizeObserver(function(){c.width=p.clientWidth;c.height=p.clientHeight;});
+    ro.observe(p);draw();return function(){ro.disconnect();};
   },[draw]);
 
-  return React.createElement('canvas',{ref,style:{display:'block',width:'100%',height:'100%'}});
+  return e('canvas',{ref:ref,style:{display:'block',width:'100%',height:'100%'}});
 }
 
-// ═══════════════════════════════════════
-// COMPONENTS
-// ═══════════════════════════════════════
-function TopBar({screen,setScreen}){
-  const [time,setTime]=useState('');
-  useEffect(()=>{const i=setInterval(()=>setTime(new Date().toTimeString().split(' ')[0]),1000);return()=>clearInterval(i);},[]);
-
-  const tabs=[
-    {id:'assess',label:'Live Assessment',icon:'◉'},
-    {id:'alerts',label:'Clinical Alerts',icon:'⚠'},
-    {id:'history',label:'Patient History',icon:'📈'},
-  ];
-  return React.createElement('div',{style:{height:56,background:'var(--s1)',borderBottom:'1px solid var(--bdr)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',flexShrink:0}},
-    React.createElement('div',{style:{display:'flex',alignItems:'center',gap:14}},
-      React.createElement('div',{style:{width:36,height:36,borderRadius:10,background:'linear-gradient(135deg,var(--teal2),var(--teal))',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,fontSize:14,color:'#000'}},'N'),
-      React.createElement('div',null,
-        React.createElement('div',{style:{fontWeight:800,fontSize:15,letterSpacing:-.3}},'NeuroCheck',React.createElement('span',{style:{color:'var(--teal)'}},'AI')),
-      ),
-      React.createElement('span',{style:{fontFamily:'var(--m)',fontSize:10,background:'var(--tealG)',color:'var(--teal)',padding:'3px 8px',borderRadius:6,border:'1px solid rgba(29,233,182,.15)',fontWeight:600}},'PROTOTYPE'),
-    ),
-    React.createElement('div',{style:{display:'flex',gap:2}},
-      ...tabs.map(t=>React.createElement('button',{key:t.id,onClick:()=>setScreen(t.id),style:{padding:'8px 16px',borderRadius:8,border:'1px solid '+(screen===t.id?'var(--teal)':'transparent'),background:screen===t.id?'var(--tealG)':'transparent',color:screen===t.id?'var(--teal)':'var(--tx2)',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'var(--f)',display:'flex',alignItems:'center',gap:6,transition:'all .2s'}},t.icon,' ',t.label))
-    ),
-    React.createElement('div',{style:{display:'flex',alignItems:'center',gap:14}},
-      React.createElement('span',{style:{fontFamily:'var(--m)',fontSize:9,color:'var(--tx3)',background:'var(--s2)',padding:'4px 10px',borderRadius:6,border:'1px solid var(--bdr)'}},'Patent: AI-Based Assessment + Continuous Monitoring'),
-      React.createElement('div',{style:{display:'flex',alignItems:'center',gap:6}},
-        React.createElement('div',{style:{width:7,height:7,borderRadius:'50%',background:'var(--green)',boxShadow:'0 0 8px var(--green)',animation:'pulse 2s infinite'}}),
-        React.createElement('span',{style:{fontSize:12,color:'var(--green)',fontWeight:600}},'Active'),
-      ),
-      React.createElement('span',{style:{fontFamily:'var(--m)',fontSize:13,color:'var(--tx2)'}},time),
-    ),
-  );
-}
-
-function PatientSidebar(){
-  return React.createElement('div',{style:{width:260,background:'var(--s1)',borderRight:'1px solid var(--bdr)',padding:16,overflowY:'auto',flexShrink:0}},
-    React.createElement('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1.5,color:'var(--tx3)',marginBottom:12}},'Patient'),
-    React.createElement('div',{style:{background:'var(--s2)',borderRadius:12,padding:14,border:'1px solid var(--bdr)',marginBottom:14}},
-      React.createElement('div',{style:{fontWeight:700,fontSize:15}},PATIENT.name),
-      React.createElement('div',{style:{fontFamily:'var(--m)',fontSize:10,color:'var(--tx3)',marginTop:2}},PATIENT.mrn,' • ',PATIENT.age,PATIENT.sex,' • BMI ',PATIENT.bmi),
-      React.createElement('div',{style:{display:'flex',flexWrap:'wrap',gap:4,marginTop:10}},
-        React.createElement('span',{style:{fontSize:9,padding:'3px 7px',borderRadius:5,fontWeight:600,fontFamily:'var(--m)',background:'var(--redG)',color:'var(--red)',border:'1px solid rgba(255,82,82,.2)'}},PATIENT.bed),
-        React.createElement('span',{style:{fontSize:9,padding:'3px 7px',borderRadius:5,fontWeight:600,fontFamily:'var(--m)',background:'var(--amberG)',color:'var(--amber)',border:'1px solid rgba(255,171,64,.2)'}},'CFS 5'),
-        React.createElement('span',{style:{fontSize:9,padding:'3px 7px',borderRadius:5,fontWeight:600,fontFamily:'var(--m)',background:'var(--blueG)',color:'var(--blue)',border:'1px solid rgba(68,138,255,.2)'}},'POST-OP D2'),
-      ),
-      React.createElement('div',{style:{marginTop:10,fontSize:10,color:'var(--tx3)',lineHeight:1.6,fontFamily:'var(--m)'}},
-        'Dx: ',PATIENT.dx,React.createElement('br'),
-        'Hx: ',PATIENT.hx,React.createElement('br'),
-        'Attending: ',PATIENT.attending,
-      ),
-    ),
-    React.createElement('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1.5,color:'var(--tx3)',marginBottom:10}},'Camera Config'),
-    React.createElement('div',{style:{background:'var(--s2)',borderRadius:10,padding:12,border:'1px solid var(--bdr)',fontSize:10,color:'var(--tx2)',lineHeight:1.8}},
-      React.createElement('div',{style:{fontFamily:'var(--m)',fontSize:9,fontWeight:700,color:'var(--teal)',marginBottom:6,letterSpacing:.5}},'ICU HARDWARE — PER PATENT'),
-      React.createElement('div',null,'• ',React.createElement('b',null,'Bedside:'),' Intel RealSense D435i'),
-      React.createElement('div',null,'• ',React.createElement('b',null,'Foot-of-Bed:'),' Axis M3068-P'),
-      React.createElement('div',null,'• ',React.createElement('b',null,'Edge:'),' NVIDIA Jetson Orin Nano'),
-      React.createElement('div',{style:{marginTop:6,paddingTop:6,borderTop:'1px solid var(--bdr)',fontSize:9,color:'var(--tx3)'}},'HL7 FHIR R4 • HIPAA Compliant'),
-    ),
-  );
-}
-
-// ═══════════════════════════════════════
-// SCREEN 1: LIVE ASSESSMENT
-// ═══════════════════════════════════════
+// ═══ ASSESSMENT SCREEN ═══
 function AssessmentScreen(){
-  const [cnStep,setCnStep]=useState(-1);
-  const [cnResults,setCnResults]=useState({});
-  const [phase,setPhase]=useState('init');
-  const [gcs,setGcs]=useState({e:'—',v:'—',m:'—',total:'—'});
-  const [cam,setCam]=useState({score:'—',rass:'—',acute:'—',inatt:'—',disorg:'—',alter:'—'});
-  const [frail,setFrail]=useState({cfs:'—',temp:'—',grip:'—',fall:'—',score:'—'});
-  const [alertFired,setAlertFired]=useState(false);
+  var s1=H(-1),cnStep=s1[0],setCnStep=s1[1];
+  var s2=H({}),cnR=s2[0],setCnR=s2[1];
+  var s3=H('init'),phase=s3[0],setPhase=s3[1];
+  var s4=H({e:'—',v:'—',m:'—',t:'—'}),gcs=s4[0],setGcs=s4[1];
+  var s5=H({s:'—',r:'—',a:'—',i:'—',d:'—',al:'—'}),cam=s5[0],setCam=s5[1];
+  var s6=H({c:'—',t:'—',g:'—',f:'—',s:'—'}),fr=s6[0],setFr=s6[1];
+  var s7=H(false),alert=s7[0],setAlert=s7[1];
 
-  useEffect(()=>{
-    const seq=async()=>{
-      await wait(2000);
-      // CN Tests
-      for(let i=0;i<CN_TESTS.length;i++){
-        setCnStep(i);setPhase('cn');
-        await wait(CN_TESTS[i].dur);
-        setCnResults(p=>({...p,[CN_TESTS[i].id]:'pass'}));
-      }
+  E(function(){
+    var w=function(ms){return new Promise(function(r){setTimeout(r,ms)})};
+    (async function(){
+      await w(2000);
+      for(var i=0;i<CNT.length;i++){setCnStep(i);setPhase('cn');await w(CNT[i].dur);setCnR(function(p){var n=Object.assign({},p);n[CNT[i].id]='pass';return n;});}
       setCnStep(-1);
-      // GCS
-      setPhase('gcs');await wait(1500);
-      setGcs(p=>({...p,e:'4'}));await wait(1200);
-      setGcs(p=>({...p,v:'5'}));await wait(1200);
-      setGcs(p=>({...p,m:'6',total:'15/15'}));await wait(1500);
-      // Delirium
-      setPhase('delirium');await wait(1000);
-      setCam(p=>({...p,rass:'-1'}));await wait(1200);
-      setCam(p=>({...p,acute:'Yes'}));await wait(1200);
-      setCam(p=>({...p,inatt:'+1'}));await wait(1200);
-      setCam(p=>({...p,disorg:'No',alter:'+1',score:'3/7'}));await wait(1500);
-      setAlertFired(true);
-      // Frailty
-      setPhase('frailty');await wait(1000);
-      setFrail(p=>({...p,cfs:'5/9'}));await wait(1200);
-      setFrail(p=>({...p,temp:'7.8mm ↓'}));await wait(1200);
-      setFrail(p=>({...p,grip:'14.2 kg ↓'}));await wait(1200);
-      setFrail(p=>({...p,fall:'HIGH',score:'5/9'}));await wait(2000);
+      setPhase('gcs');await w(1500);setGcs(function(p){return Object.assign({},p,{e:'4'})});await w(1200);
+      setGcs(function(p){return Object.assign({},p,{v:'5'})});await w(1200);
+      setGcs(function(p){return Object.assign({},p,{m:'6',t:'15/15'})});await w(1500);
+      setPhase('delirium');await w(1000);setCam(function(p){return Object.assign({},p,{r:'-1'})});await w(1200);
+      setCam(function(p){return Object.assign({},p,{a:'Yes'})});await w(1200);
+      setCam(function(p){return Object.assign({},p,{i:'+1'})});await w(1200);
+      setCam(function(p){return Object.assign({},p,{d:'No',al:'+1',s:'3/7'})});await w(1500);setAlert(true);
+      setPhase('frailty');await w(1000);setFr(function(p){return Object.assign({},p,{c:'5/9'})});await w(1200);
+      setFr(function(p){return Object.assign({},p,{t:'7.8mm \u2193'})});await w(1200);
+      setFr(function(p){return Object.assign({},p,{g:'14.2 kg \u2193'})});await w(1200);
+      setFr(function(p){return Object.assign({},p,{f:'HIGH',s:'5/9'})});await w(2000);
       setPhase('complete');
-    };
-    seq();
+    })();
   },[]);
 
-  const wait=(ms)=>new Promise(r=>setTimeout(r,ms));
-
-  return React.createElement('div',{style:{display:'flex',flex:1,overflow:'hidden'}},
-    React.createElement(PatientSidebar),
-    // Main video area
-    React.createElement('div',{style:{flex:1,position:'relative',background:'#050810',overflow:'hidden'}},
-      React.createElement(FaceCanvas,{cnStep,phase}),
-      // Camera label
-      React.createElement('div',{style:{position:'absolute',top:14,left:14,display:'flex',alignItems:'center',gap:8,background:'rgba(0,0,0,.7)',backdropFilter:'blur(10px)',padding:'6px 14px',borderRadius:8,fontSize:11,fontFamily:'var(--m)',color:'var(--tx)'}},
-        React.createElement('div',{style:{width:7,height:7,borderRadius:'50%',background:'var(--red)',animation:'pulse 1s infinite'}}),
-        'LIVE — CAM 1: Intel RealSense D435i'
+  // Sidebar
+  var sidebar=e('div',{style:{width:250,background:'var(--s1)',borderRight:'1px solid var(--bdr)',padding:14,overflowY:'auto',flexShrink:0}},
+    e('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1.5,color:'var(--tx3)',marginBottom:10}},'Patient'),
+    e('div',{style:{background:'var(--s2)',borderRadius:12,padding:12,border:'1px solid var(--bdr)',marginBottom:12}},
+      e('div',{style:{fontWeight:700,fontSize:14}},PAT.name),
+      e('div',{style:{fontFamily:'var(--m)',fontSize:10,color:'var(--tx3)',marginTop:2}},PAT.mrn+' \u2022 '+PAT.age+PAT.sex),
+      e('div',{style:{display:'flex',flexWrap:'wrap',gap:4,marginTop:8}},
+        e('span',{style:{fontSize:9,padding:'2px 6px',borderRadius:5,fontWeight:600,fontFamily:'var(--m)',background:'var(--redG)',color:'var(--red)',border:'1px solid rgba(255,82,82,.2)'}},PAT.bed),
+        e('span',{style:{fontSize:9,padding:'2px 6px',borderRadius:5,fontWeight:600,fontFamily:'var(--m)',background:'var(--amberG)',color:'var(--amber)',border:'1px solid rgba(255,171,64,.2)'}},'CFS 5'),
+        e('span',{style:{fontSize:9,padding:'2px 6px',borderRadius:5,fontWeight:600,fontFamily:'var(--m)',background:'var(--blueG)',color:'var(--blue)',border:'1px solid rgba(68,138,255,.2)'}},'POST-OP D2')
       ),
-      React.createElement('div',{style:{position:'absolute',top:14,right:14,background:'rgba(0,0,0,.7)',backdropFilter:'blur(10px)',padding:'6px 14px',borderRadius:8,fontSize:11,fontFamily:'var(--m)',color:'var(--teal)'}},'30 FPS • 468 landmarks • CNN active'),
-      // CN Prompt
-      cnStep>=0 && React.createElement('div',{style:{position:'absolute',top:'8%',left:'50%',transform:'translateX(-50%)',background:'rgba(0,0,0,.88)',backdropFilter:'blur(16px)',padding:'22px 36px',borderRadius:16,textAlign:'center',border:'1px solid var(--teal)',boxShadow:'0 0 50px rgba(29,233,182,.1)',animation:'fadeIn .3s',zIndex:10}},
-        React.createElement('div',{style:{fontSize:20,fontWeight:800,color:'var(--teal)',marginBottom:4}},CN_TESTS[cnStep].prompt),
-        React.createElement('div',{style:{fontSize:12,color:'var(--tx2)'}},CN_TESTS[cnStep].desc),
-      ),
-      // Phase label
-      phase==='complete' && React.createElement('div',{style:{position:'absolute',top:'8%',left:'50%',transform:'translateX(-50%)',background:'rgba(0,0,0,.88)',backdropFilter:'blur(16px)',padding:'22px 36px',borderRadius:16,textAlign:'center',border:'1px solid var(--green)',boxShadow:'0 0 50px rgba(105,240,174,.1)',animation:'fadeIn .3s'}},
-        React.createElement('div',{style:{fontSize:20,fontWeight:800,color:'var(--green)'}},'✓ Assessment Complete'),
-        React.createElement('div',{style:{fontSize:12,color:'var(--tx2)'}},'Results transmitted to PredictWell CommandOS → EHR'),
-      ),
-      // Alert banner
-      alertFired && React.createElement('div',{style:{position:'absolute',bottom:50,left:'50%',transform:'translateX(-50%)',background:'rgba(255,82,82,.12)',border:'1px solid rgba(255,82,82,.4)',backdropFilter:'blur(10px)',padding:'10px 24px',borderRadius:10,display:'flex',alignItems:'center',gap:10,animation:'alertPulse 2s infinite'}},
-        React.createElement('div',{style:{fontSize:14}},'🚨'),
-        React.createElement('div',null,
-          React.createElement('div',{style:{fontSize:11,fontWeight:700,color:'var(--red)'}},'ALERT: Delirium Score Increase Detected'),
-          React.createElement('div',{style:{fontSize:10,color:'var(--tx2)'}},'CAM-ICU-7: 3/7 — Notify attending physician'),
-        ),
-      ),
-      // Tracking bar
-      React.createElement('div',{style:{position:'absolute',bottom:14,left:14,background:'rgba(0,0,0,.7)',backdropFilter:'blur(10px)',padding:'7px 16px',borderRadius:8,fontSize:11,fontWeight:600,color:'var(--teal)',display:'flex',alignItems:'center',gap:8}},
-        React.createElement('div',{style:{width:6,height:6,borderRadius:'50%',background:'var(--green)',boxShadow:'0 0 6px var(--green)'}}),
-        'Face Detected — 468 Landmarks'
-      ),
+      e('div',{style:{marginTop:8,fontSize:10,color:'var(--tx3)',lineHeight:1.6,fontFamily:'var(--m)'}},
+        'Dx: '+PAT.dx,e('br'),'Hx: '+PAT.hx,e('br'),'Attending: '+PAT.att)
     ),
-    // Right scoring panel
-    React.createElement('div',{style:{width:300,background:'var(--s1)',borderLeft:'1px solid var(--bdr)',padding:14,overflowY:'auto',flexShrink:0}},
-      React.createElement('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1.5,color:'var(--tx3)',marginBottom:12}},'Live Scoring'),
-      // GCS
-      React.createElement('div',{style:{background:'var(--s2)',borderRadius:11,padding:13,marginBottom:9,border:'1px solid '+(phase==='gcs'?'var(--teal)':'var(--bdr)'),transition:'border-color .3s'}},
-        React.createElement('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:8}},
-          React.createElement('span',{style:{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--blue)'}},'Glasgow Coma Scale'),
-          React.createElement('span',{style:{fontFamily:'var(--m)',fontSize:18,fontWeight:800,color:gcs.total!=='—'?'var(--green)':'var(--tx3)'}},gcs.total),
-        ),
-        React.createElement('div',{style:{height:4,borderRadius:2,background:'var(--s3)',marginBottom:8,overflow:'hidden'}},
-          React.createElement('div',{style:{height:'100%',borderRadius:2,background:'var(--green)',width:gcs.total!=='—'?'100%':'0%',transition:'width .8s'}}),
-        ),
-        [{l:'Eye Opening (E)',v:gcs.e},{l:'Verbal (V)',v:gcs.v},{l:'Motor (M)',v:gcs.m}].map(({l,v})=>
-          React.createElement('div',{key:l,style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:4}},
-            React.createElement('span',{style:{color:'var(--tx2)'}},l),
-            React.createElement('span',{style:{fontFamily:'var(--m)',fontWeight:600,color:v!=='—'?'var(--tx)':'var(--tx3)'}},v),
-          )
-        ),
-      ),
-      // CN Grid
-      React.createElement('div',{style:{background:'var(--s2)',borderRadius:11,padding:13,marginBottom:9,border:'1px solid '+(phase==='cn'?'var(--teal)':'var(--bdr)')}},
-        React.createElement('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:8}},
-          React.createElement('span',{style:{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--purple)'}},'Cranial Nerves'),
-          React.createElement('span',{style:{fontFamily:'var(--m)',fontSize:14,fontWeight:800,color:Object.keys(cnResults).length===10?'var(--green)':'var(--tx3)'}},Object.keys(cnResults).length,'/10'),
-        ),
-        React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:3}},
-          ...CN_TESTS.map(test=>{
-            const status=cnResults[test.id]?'pass':cnStep>=0&&CN_TESTS[cnStep].id===test.id?'testing':'pending';
-            return React.createElement('div',{key:test.id,style:{display:'flex',alignItems:'center',gap:5,padding:'4px 7px',borderRadius:5,background:status==='testing'?'var(--amberG)':status==='pass'?'var(--greenG)':'var(--s3)',fontSize:9,fontFamily:'var(--m)',transition:'background .3s'}},
-              React.createElement('div',{style:{width:5,height:5,borderRadius:'50%',background:status==='pass'?'var(--green)':status==='testing'?'var(--amber)':'var(--tx3)',boxShadow:status==='pass'?'0 0 5px var(--green)':'none',animation:status==='testing'?'pulse .8s infinite':'none'}}),
-              'CN ',test.id
-            );
-          })
-        ),
-      ),
-      // CAM-ICU
-      React.createElement('div',{style:{background:'var(--s2)',borderRadius:11,padding:13,marginBottom:9,border:'1px solid '+(phase==='delirium'?'var(--red)':'var(--bdr)')}},
-        React.createElement('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:8}},
-          React.createElement('span',{style:{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--red)'}},'CAM-ICU-7 Delirium'),
-          React.createElement('span',{style:{fontFamily:'var(--m)',fontSize:18,fontWeight:800,color:cam.score!=='—'?'var(--amber)':'var(--tx3)'}},cam.score),
-        ),
-        React.createElement('div',{style:{height:4,borderRadius:2,background:'var(--s3)',marginBottom:8,overflow:'hidden'}},
-          React.createElement('div',{style:{height:'100%',borderRadius:2,background:'var(--amber)',width:cam.score!=='—'?'43%':'0%',transition:'width .8s'}}),
-        ),
-        [{l:'RASS',v:cam.rass},{l:'Acute Onset',v:cam.acute},{l:'Inattention',v:cam.inatt},{l:'Disorganized',v:cam.disorg},{l:'Altered Consciousness',v:cam.alter}].map(({l,v})=>
-          React.createElement('div',{key:l,style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:4}},
-            React.createElement('span',{style:{color:'var(--tx2)'}},l),
-            React.createElement('span',{style:{fontFamily:'var(--m)',fontWeight:600,color:v==='—'?'var(--tx3)':v==='No'?'var(--green)':'var(--amber)'}},v),
-          )
-        ),
-      ),
-      // Frailty
-      React.createElement('div',{style:{background:'var(--s2)',borderRadius:11,padding:13,border:'1px solid '+(phase==='frailty'?'var(--amber)':'var(--bdr)')}},
-        React.createElement('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:8}},
-          React.createElement('span',{style:{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--amber)'}},'Frailty Index'),
-          React.createElement('span',{style:{fontFamily:'var(--m)',fontSize:18,fontWeight:800,color:frail.score!=='—'?'var(--amber)':'var(--tx3)'}},frail.score),
-        ),
-        React.createElement('div',{style:{height:4,borderRadius:2,background:'var(--s3)',marginBottom:8,overflow:'hidden'}},
-          React.createElement('div',{style:{height:'100%',borderRadius:2,background:'var(--amber)',width:frail.score!=='—'?'56%':'0%',transition:'width .8s'}}),
-        ),
-        [{l:'Clinical Frailty Scale',v:frail.cfs},{l:'Temporalis Thickness',v:frail.temp},{l:'Grip Strength',v:frail.grip},{l:'Fall Risk (Hopkins)',v:frail.fall}].map(({l,v})=>
-          React.createElement('div',{key:l,style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:4}},
-            React.createElement('span',{style:{color:'var(--tx2)'}},l),
-            React.createElement('span',{style:{fontFamily:'var(--m)',fontWeight:600,color:v==='—'?'var(--tx3)':v.includes('↓')||v==='HIGH'?'var(--red)':'var(--amber)'}},v),
-          )
-        ),
-      ),
-    ),
+    e('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1.5,color:'var(--tx3)',marginBottom:8}},'Camera Config'),
+    e('div',{style:{background:'var(--s2)',borderRadius:10,padding:10,border:'1px solid var(--bdr)',fontSize:10,color:'var(--tx2)',lineHeight:1.7}},
+      e('div',{style:{fontFamily:'var(--m)',fontSize:9,fontWeight:700,color:'var(--teal)',marginBottom:4}},'ICU HARDWARE'),
+      '\u2022 Bedside: Intel RealSense D435i',e('br'),'\u2022 Foot-of-Bed: Axis M3068-P',e('br'),'\u2022 Edge: NVIDIA Jetson Orin Nano',e('br'),
+      e('div',{style:{marginTop:6,paddingTop:6,borderTop:'1px solid var(--bdr)',fontSize:9,color:'var(--tx3)'}},'HL7 FHIR R4 \u2022 HIPAA Compliant')
+    )
   );
-}
 
-// ═══════════════════════════════════════
-// SCREEN 2: CLINICAL ALERTS
-// ═══════════════════════════════════════
-function AlertsScreen(){
-  const sevColor={high:'var(--red)',medium:'var(--amber)',low:'var(--green)'};
-  const sevBg={high:'var(--redG)',medium:'var(--amberG)',low:'var(--greenG)'};
+  // Score row helper
+  function sr(label,val,isAlert){
+    return e('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:4}},
+      e('span',{style:{color:'var(--tx2)'}},label),
+      e('span',{style:{fontFamily:'var(--m)',fontWeight:600,color:val==='—'?'var(--tx3)':isAlert?'var(--red)':'var(--tx)'}},val));
+  }
 
-  return React.createElement('div',{style:{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}},
-    // Alert summary bar
-    React.createElement('div',{style:{display:'flex',gap:12,padding:'16px 24px',background:'var(--s1)',borderBottom:'1px solid var(--bdr)'}},
-      [{label:'Critical',count:2,color:'var(--red)',bg:'var(--redG)'},{label:'Warning',count:1,color:'var(--amber)',bg:'var(--amberG)'},{label:'Info',count:2,color:'var(--green)',bg:'var(--greenG)'}].map(a=>
-        React.createElement('div',{key:a.label,style:{display:'flex',alignItems:'center',gap:8,padding:'8px 16px',borderRadius:8,background:a.bg,border:'1px solid '+a.color+'22'}},
-          React.createElement('span',{style:{fontFamily:'var(--m)',fontSize:22,fontWeight:800,color:a.color}},a.count),
-          React.createElement('span',{style:{fontSize:11,fontWeight:600,color:a.color}},a.label),
-        )
-      ),
-      React.createElement('div',{style:{marginLeft:'auto',display:'flex',alignItems:'center',gap:8}},
-        React.createElement('span',{style:{fontSize:11,color:'var(--tx3)'}},'Patient: ',React.createElement('b',{style:{color:'var(--tx)'}},PATIENT.name)),
-        React.createElement('span',{style:{fontSize:11,color:'var(--tx3)'}},' | ',PATIENT.bed),
-      ),
+  // Right panel
+  var right=e('div',{style:{width:290,background:'var(--s1)',borderLeft:'1px solid var(--bdr)',padding:12,overflowY:'auto',flexShrink:0}},
+    e('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1.5,color:'var(--tx3)',marginBottom:10}},'Live Scoring'),
+    // GCS
+    e('div',{style:{background:'var(--s2)',borderRadius:11,padding:12,marginBottom:8,border:'1px solid '+(phase==='gcs'?'var(--teal)':'var(--bdr)')}},
+      e('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:6}},
+        e('span',{style:{fontSize:11,fontWeight:700,color:'var(--blue)'}},'GCS'),
+        e('span',{style:{fontFamily:'var(--m)',fontSize:18,fontWeight:800,color:gcs.t!=='—'?'var(--green)':'var(--tx3)'}},gcs.t)),
+      e('div',{style:{height:4,borderRadius:2,background:'var(--s3)',marginBottom:6,overflow:'hidden'}},
+        e('div',{style:{height:'100%',borderRadius:2,background:'var(--green)',width:gcs.t!=='—'?'100%':'0%',transition:'width .8s'}})),
+      sr('Eye (E)',gcs.e),sr('Verbal (V)',gcs.v),sr('Motor (M)',gcs.m)
     ),
-    // Alert list
-    React.createElement('div',{style:{flex:1,overflowY:'auto',padding:20,display:'flex',flexDirection:'column',gap:12}},
-      ...ALERTS.map((a,i)=>
-        React.createElement('div',{key:a.id,style:{background:'var(--s1)',borderRadius:14,border:'1px solid '+(a.severity==='high'?'rgba(255,82,82,.3)':a.severity==='medium'?'rgba(255,171,64,.2)':'var(--bdr)'),padding:0,overflow:'hidden',animation:`slideUp .4s ${i*0.08}s both`}},
-          // Alert header
-          React.createElement('div',{style:{display:'flex',alignItems:'center',gap:12,padding:'14px 18px',background:sevBg[a.severity],borderBottom:'1px solid var(--bdr)'}},
-            React.createElement('div',{style:{width:10,height:10,borderRadius:'50%',background:sevColor[a.severity],boxShadow:'0 0 8px '+sevColor[a.severity],animation:a.severity==='high'?'pulse 1.5s infinite':'none'}}),
-            React.createElement('div',{style:{flex:1}},
-              React.createElement('div',{style:{fontWeight:700,fontSize:14,color:'var(--tx)'}},a.title),
-              React.createElement('div',{style:{fontFamily:'var(--m)',fontSize:10,color:'var(--tx3)',marginTop:2}},a.time,' • ',a.module,' • Score: ',a.value),
-            ),
-            React.createElement('span',{style:{fontFamily:'var(--m)',fontSize:10,padding:'4px 10px',borderRadius:6,fontWeight:700,textTransform:'uppercase',background:sevBg[a.severity],color:sevColor[a.severity],border:'1px solid '+sevColor[a.severity]+'33'}},a.severity),
-          ),
-          // Alert body
-          React.createElement('div',{style:{padding:'14px 18px'}},
-            React.createElement('div',{style:{fontSize:12,color:'var(--tx2)',lineHeight:1.7,marginBottom:12}},a.desc),
-            React.createElement('div',{style:{background:'var(--s2)',borderRadius:8,padding:'10px 14px',border:'1px solid var(--bdr)'}},
-              React.createElement('div',{style:{fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--teal)',marginBottom:6}},'Recommended Action'),
-              React.createElement('div',{style:{fontSize:11,color:'var(--tx)',lineHeight:1.6}},a.action),
-            ),
-          ),
-        )
+    // CN
+    e('div',{style:{background:'var(--s2)',borderRadius:11,padding:12,marginBottom:8,border:'1px solid '+(phase==='cn'?'var(--teal)':'var(--bdr)')}},
+      e('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:6}},
+        e('span',{style:{fontSize:11,fontWeight:700,color:'var(--purple)'}},'Cranial Nerves'),
+        e('span',{style:{fontFamily:'var(--m)',fontSize:14,fontWeight:800,color:Object.keys(cnR).length===10?'var(--green)':'var(--tx3)'}},Object.keys(cnR).length+'/10')),
+      e('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:3}},
+        CNT.map(function(t){
+          var st=cnR[t.id]?'pass':cnStep>=0&&CNT[cnStep].id===t.id?'testing':'pending';
+          return e('div',{key:t.id,style:{display:'flex',alignItems:'center',gap:4,padding:'3px 6px',borderRadius:4,background:st==='testing'?'var(--amberG)':st==='pass'?'var(--greenG)':'var(--s3)',fontSize:9,fontFamily:'var(--m)'}},
+            e('div',{style:{width:5,height:5,borderRadius:'50%',background:st==='pass'?'var(--green)':st==='testing'?'var(--amber)':'var(--tx3)',boxShadow:st==='pass'?'0 0 5px var(--green)':'none',animation:st==='testing'?'pulse .8s infinite':'none'}}),
+            'CN '+t.id);
+        })
       )
     ),
+    // CAM
+    e('div',{style:{background:'var(--s2)',borderRadius:11,padding:12,marginBottom:8,border:'1px solid '+(phase==='delirium'?'var(--red)':'var(--bdr)')}},
+      e('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:6}},
+        e('span',{style:{fontSize:11,fontWeight:700,color:'var(--red)'}},'CAM-ICU-7'),
+        e('span',{style:{fontFamily:'var(--m)',fontSize:18,fontWeight:800,color:cam.s!=='—'?'var(--amber)':'var(--tx3)'}},cam.s)),
+      e('div',{style:{height:4,borderRadius:2,background:'var(--s3)',marginBottom:6,overflow:'hidden'}},
+        e('div',{style:{height:'100%',borderRadius:2,background:'var(--amber)',width:cam.s!=='—'?'43%':'0%',transition:'width .8s'}})),
+      sr('RASS',cam.r,cam.r!=='—'&&cam.r!=='0'),sr('Acute Onset',cam.a,cam.a==='Yes'),sr('Inattention',cam.i,cam.i==='+1'),sr('Disorganized',cam.d,false),sr('Altered',cam.al,cam.al==='+1')
+    ),
+    // Frailty
+    e('div',{style:{background:'var(--s2)',borderRadius:11,padding:12,border:'1px solid '+(phase==='frailty'?'var(--amber)':'var(--bdr)')}},
+      e('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:6}},
+        e('span',{style:{fontSize:11,fontWeight:700,color:'var(--amber)'}},'Frailty'),
+        e('span',{style:{fontFamily:'var(--m)',fontSize:18,fontWeight:800,color:fr.s!=='—'?'var(--amber)':'var(--tx3)'}},fr.s)),
+      e('div',{style:{height:4,borderRadius:2,background:'var(--s3)',marginBottom:6,overflow:'hidden'}},
+        e('div',{style:{height:'100%',borderRadius:2,background:'var(--amber)',width:fr.s!=='—'?'56%':'0%',transition:'width .8s'}})),
+      sr('CFS',fr.c),sr('Temporalis',fr.t,fr.t.includes&&fr.t.includes('\u2193')),sr('Grip',fr.g,fr.g.includes&&fr.g.includes('\u2193')),sr('Fall Risk',fr.f,fr.f==='HIGH')
+    )
+  );
+
+  return e('div',{style:{display:'flex',flex:1,overflow:'hidden'}},
+    sidebar,
+    // Main
+    e('div',{style:{flex:1,position:'relative',background:'#050810',overflow:'hidden'}},
+      e(FaceCanvas,{cnStep:cnStep,phase:phase}),
+      e('div',{style:{position:'absolute',top:14,left:14,display:'flex',alignItems:'center',gap:8,background:'rgba(0,0,0,.7)',backdropFilter:'blur(10px)',padding:'6px 14px',borderRadius:8,fontSize:11,fontFamily:'var(--m)'}},
+        e('div',{style:{width:7,height:7,borderRadius:'50%',background:'var(--red)',animation:'pulse 1s infinite'}}),'LIVE \u2014 CAM 1: Intel RealSense D435i'),
+      e('div',{style:{position:'absolute',top:14,right:14,background:'rgba(0,0,0,.7)',backdropFilter:'blur(10px)',padding:'6px 14px',borderRadius:8,fontSize:11,fontFamily:'var(--m)',color:'var(--teal)'}},'30 FPS \u2022 468 landmarks'),
+      cnStep>=0&&e('div',{style:{position:'absolute',top:'8%',left:'50%',transform:'translateX(-50%)',background:'rgba(0,0,0,.88)',backdropFilter:'blur(16px)',padding:'20px 32px',borderRadius:14,textAlign:'center',border:'1px solid var(--teal)',boxShadow:'0 0 50px rgba(29,233,182,.1)',zIndex:10}},
+        e('div',{style:{fontSize:20,fontWeight:800,color:'var(--teal)',marginBottom:4}},CNT[cnStep].prompt),
+        e('div',{style:{fontSize:12,color:'var(--tx2)'}},CNT[cnStep].desc)),
+      phase==='complete'&&e('div',{style:{position:'absolute',top:'8%',left:'50%',transform:'translateX(-50%)',background:'rgba(0,0,0,.88)',backdropFilter:'blur(16px)',padding:'20px 32px',borderRadius:14,textAlign:'center',border:'1px solid var(--green)',boxShadow:'0 0 50px rgba(105,240,174,.1)'}},
+        e('div',{style:{fontSize:20,fontWeight:800,color:'var(--green)'}},'\u2713 Assessment Complete'),
+        e('div',{style:{fontSize:12,color:'var(--tx2)'}},'Results \u2192 PredictWell CommandOS \u2192 EHR')),
+      alert&&e('div',{style:{position:'absolute',bottom:50,left:'50%',transform:'translateX(-50%)',background:'rgba(255,82,82,.12)',border:'1px solid rgba(255,82,82,.4)',backdropFilter:'blur(10px)',padding:'10px 24px',borderRadius:10,display:'flex',alignItems:'center',gap:10,animation:'alertPulse 2s infinite'}},
+        e('div',{style:{fontSize:14}},'\ud83d\udea8'),
+        e('div',null,
+          e('div',{style:{fontSize:11,fontWeight:700,color:'var(--red)'}},'ALERT: Delirium Score Increase'),
+          e('div',{style:{fontSize:10,color:'var(--tx2)'}},'CAM-ICU-7: 3/7 \u2014 Notify attending'))),
+      e('div',{style:{position:'absolute',bottom:14,left:14,background:'rgba(0,0,0,.7)',backdropFilter:'blur(10px)',padding:'7px 16px',borderRadius:8,fontSize:11,fontWeight:600,color:'var(--teal)',display:'flex',alignItems:'center',gap:8}},
+        e('div',{style:{width:6,height:6,borderRadius:'50%',background:'var(--green)',boxShadow:'0 0 6px var(--green)'}}),'Face Detected \u2014 468 Landmarks')
+    ),
+    right
   );
 }
 
-// ═══════════════════════════════════════
-// SCREEN 3: PATIENT HISTORY
-// ═══════════════════════════════════════
+// ═══ ALERTS SCREEN ═══
+function AlertsScreen(){
+  var sc={high:'var(--red)',med:'var(--amber)',low:'var(--green)'};
+  var sb={high:'var(--redG)',med:'var(--amberG)',low:'var(--greenG)'};
+  return e('div',{style:{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}},
+    e('div',{style:{display:'flex',gap:12,padding:'14px 20px',background:'var(--s1)',borderBottom:'1px solid var(--bdr)'}},
+      [{l:'Critical',c:2,cl:'var(--red)',bg:'var(--redG)'},{l:'Warning',c:1,cl:'var(--amber)',bg:'var(--amberG)'},{l:'Info',c:2,cl:'var(--green)',bg:'var(--greenG)'}].map(function(a){
+        return e('div',{key:a.l,style:{display:'flex',alignItems:'center',gap:8,padding:'8px 16px',borderRadius:8,background:a.bg,border:'1px solid '+a.cl+'22'}},
+          e('span',{style:{fontFamily:'var(--m)',fontSize:22,fontWeight:800,color:a.cl}},a.c),
+          e('span',{style:{fontSize:11,fontWeight:600,color:a.cl}},a.l));
+      }),
+      e('div',{style:{marginLeft:'auto',display:'flex',alignItems:'center',gap:8}},
+        e('span',{style:{fontSize:11,color:'var(--tx3)'}},'Patient: ',e('b',{style:{color:'var(--tx)'}},PAT.name)),
+        e('span',{style:{fontSize:11,color:'var(--tx3)'}},' | '+PAT.bed))
+    ),
+    e('div',{style:{flex:1,overflowY:'auto',padding:20,display:'flex',flexDirection:'column',gap:12}},
+      ALERTS.map(function(a,i){
+        return e('div',{key:a.id,style:{background:'var(--s1)',borderRadius:14,border:'1px solid '+(a.sev==='high'?'rgba(255,82,82,.3)':a.sev==='med'?'rgba(255,171,64,.2)':'var(--bdr)'),overflow:'hidden',animation:'slideUp .4s '+i*0.08+'s both'}},
+          e('div',{style:{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',background:sb[a.sev],borderBottom:'1px solid var(--bdr)'}},
+            e('div',{style:{width:10,height:10,borderRadius:'50%',background:sc[a.sev],boxShadow:'0 0 8px '+sc[a.sev],animation:a.sev==='high'?'pulse 1.5s infinite':'none'}}),
+            e('div',{style:{flex:1}},
+              e('div',{style:{fontWeight:700,fontSize:14}},a.title),
+              e('div',{style:{fontFamily:'var(--m)',fontSize:10,color:'var(--tx3)',marginTop:2}},a.time+' \u2022 '+a.mod+' \u2022 '+a.val)),
+            e('span',{style:{fontFamily:'var(--m)',fontSize:10,padding:'4px 10px',borderRadius:6,fontWeight:700,textTransform:'uppercase',background:sb[a.sev],color:sc[a.sev],border:'1px solid '+sc[a.sev]+'33'}},a.sev)),
+          e('div',{style:{padding:'12px 16px'}},
+            e('div',{style:{fontSize:12,color:'var(--tx2)',lineHeight:1.7,marginBottom:10}},a.desc),
+            e('div',{style:{background:'var(--s2)',borderRadius:8,padding:'10px 14px',border:'1px solid var(--bdr)'}},
+              e('div',{style:{fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--teal)',marginBottom:4}},'Recommended Action'),
+              e('div',{style:{fontSize:11,color:'var(--tx)',lineHeight:1.6}},a.action)))
+        );
+      })
+    )
+  );
+}
+
+// ═══ HISTORY SCREEN ═══
 function HistoryScreen(){
-  const chartStyle={fontSize:10,fontFamily:'IBM Plex Mono'};
-
-  return React.createElement('div',{style:{flex:1,overflowY:'auto',padding:20}},
-    React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}},
-      React.createElement('div',null,
-        React.createElement('div',{style:{fontSize:20,fontWeight:800}},'Patient Trajectory — ',PATIENT.name),
-        React.createElement('div',{style:{fontFamily:'var(--m)',fontSize:11,color:'var(--tx3)',marginTop:4}},PATIENT.mrn,' • ',PATIENT.dx,' • ',PATIENT.attending),
-      ),
-      React.createElement('div',{style:{display:'flex',gap:8}},
-        ['24h','48h','7d','30d'].map(r=>
-          React.createElement('button',{key:r,style:{padding:'6px 12px',borderRadius:6,border:'1px solid '+(r==='48h'?'var(--teal)':'var(--bdr)'),background:r==='48h'?'var(--tealG)':'transparent',color:r==='48h'?'var(--teal)':'var(--tx3)',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'var(--f)'}},r)
-        )
-      ),
+  return e('div',{style:{flex:1,overflowY:'auto',padding:20}},
+    e('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}},
+      e('div',null,
+        e('div',{style:{fontSize:20,fontWeight:800}},'Patient Trajectory \u2014 '+PAT.name),
+        e('div',{style:{fontFamily:'var(--m)',fontSize:11,color:'var(--tx3)',marginTop:4}},PAT.mrn+' \u2022 '+PAT.dx)),
+      e('div',{style:{display:'flex',gap:6}},
+        ['24h','48h','7d','30d'].map(function(r){
+          return e('button',{key:r,style:{padding:'6px 12px',borderRadius:6,border:'1px solid '+(r==='48h'?'var(--teal)':'var(--bdr)'),background:r==='48h'?'var(--tealG)':'transparent',color:r==='48h'?'var(--teal)':'var(--tx3)',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'var(--f)'}},r);
+        }))
     ),
-    // Charts grid
-    React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}},
+    e('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}},
       // GCS Trend
-      React.createElement('div',{style:{background:'var(--s1)',borderRadius:14,padding:18,border:'1px solid var(--bdr)'}},
-        React.createElement('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:14}},
-          React.createElement('span',{style:{fontSize:12,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--blue)'}},'GCS Trend'),
-          React.createElement('span',{style:{fontFamily:'var(--m)',fontSize:18,fontWeight:800,color:'var(--green)'}},'15/15'),
-        ),
-        React.createElement(ResponsiveContainer,{width:'100%',height:180},
-          React.createElement(AreaChart,{data:GCS_HISTORY,style:chartStyle},
-            React.createElement(CartesianGrid,{strokeDasharray:'3 3',stroke:'#1a2640'}),
-            React.createElement(XAxis,{dataKey:'day',stroke:'#5a6a85',tick:{fontSize:9}}),
-            React.createElement(YAxis,{domain:[3,15],stroke:'#5a6a85',tick:{fontSize:9}}),
-            React.createElement(ReferenceLine,{y:13,stroke:'#ff5252',strokeDasharray:'4 4',label:{value:'Concern',fill:'#ff5252',fontSize:9}}),
-            React.createElement(Area,{type:'monotone',dataKey:'gcs',stroke:'#448aff',fill:'rgba(68,138,255,.1)',strokeWidth:2,dot:{fill:'#448aff',r:4}}),
-          )
-        ),
+      e('div',{style:{background:'var(--s1)',borderRadius:14,padding:16,border:'1px solid var(--bdr)'}},
+        e('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:12}},
+          e('span',{style:{fontSize:12,fontWeight:700,color:'var(--blue)'}},'GCS TREND'),
+          e('span',{style:{fontFamily:'var(--m)',fontSize:18,fontWeight:800,color:'var(--green)'}},'15/15')),
+        e(MiniChart,{data:GCS_H,dataKey:'g',color:'#448aff',refLine:13,refLabel:'Concern',refColor:'#ff5252'})
       ),
-      // Delirium Trend
-      React.createElement('div',{style:{background:'var(--s1)',borderRadius:14,padding:18,border:'1px solid var(--bdr)'}},
-        React.createElement('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:14}},
-          React.createElement('span',{style:{fontSize:12,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--red)'}},'CAM-ICU-7 / RASS'),
-          React.createElement('span',{style:{fontFamily:'var(--m)',fontSize:18,fontWeight:800,color:'var(--amber)'}},'3/7'),
-        ),
-        React.createElement(ResponsiveContainer,{width:'100%',height:180},
-          React.createElement(LineChart,{data:DELIRIUM_HISTORY,style:chartStyle},
-            React.createElement(CartesianGrid,{strokeDasharray:'3 3',stroke:'#1a2640'}),
-            React.createElement(XAxis,{dataKey:'day',stroke:'#5a6a85',tick:{fontSize:9}}),
-            React.createElement(YAxis,{stroke:'#5a6a85',tick:{fontSize:9}}),
-            React.createElement(ReferenceLine,{y:3,stroke:'#ff5252',strokeDasharray:'4 4',label:{value:'Delirium',fill:'#ff5252',fontSize:9}}),
-            React.createElement(Line,{type:'monotone',dataKey:'cam',stroke:'#ff5252',strokeWidth:2,dot:{fill:'#ff5252',r:4},name:'CAM-ICU-7'}),
-            React.createElement(Line,{type:'monotone',dataKey:'rass',stroke:'#ffab40',strokeWidth:2,dot:{fill:'#ffab40',r:4},name:'RASS'}),
-            React.createElement(Legend,{wrapperStyle:{fontSize:10}}),
-          )
-        ),
+      // Delirium
+      e('div',{style:{background:'var(--s1)',borderRadius:14,padding:16,border:'1px solid var(--bdr)'}},
+        e('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:12}},
+          e('span',{style:{fontSize:12,fontWeight:700,color:'var(--red)'}},'CAM-ICU-7 / RASS'),
+          e('span',{style:{fontFamily:'var(--m)',fontSize:18,fontWeight:800,color:'var(--amber)'}},'3/7')),
+        e(MiniChart,{data:DEL_H,dataKey:'c',color:'#ff5252',data2Key:'r',color2:'#ffab40',refLine:3,refLabel:'Delirium',refColor:'#ff5252'})
       ),
-      // Frailty / Temporalis
-      React.createElement('div',{style:{background:'var(--s1)',borderRadius:14,padding:18,border:'1px solid var(--bdr)'}},
-        React.createElement('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:14}},
-          React.createElement('span',{style:{fontSize:12,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--amber)'}},'Frailty + Temporalis'),
-          React.createElement('span',{style:{fontFamily:'var(--m)',fontSize:18,fontWeight:800,color:'var(--amber)'}},'CFS 5'),
-        ),
-        React.createElement(ResponsiveContainer,{width:'100%',height:180},
-          React.createElement(LineChart,{data:FRAILTY_HISTORY,style:chartStyle},
-            React.createElement(CartesianGrid,{strokeDasharray:'3 3',stroke:'#1a2640'}),
-            React.createElement(XAxis,{dataKey:'day',stroke:'#5a6a85',tick:{fontSize:9}}),
-            React.createElement(YAxis,{stroke:'#5a6a85',tick:{fontSize:9}}),
-            React.createElement(ReferenceLine,{y:10,stroke:'#ff5252',strokeDasharray:'4 4',label:{value:'Sarcopenia',fill:'#ff5252',fontSize:9}}),
-            React.createElement(Line,{type:'monotone',dataKey:'cfs',stroke:'#ffab40',strokeWidth:2,dot:{fill:'#ffab40',r:4},name:'CFS'}),
-            React.createElement(Line,{type:'monotone',dataKey:'temp',stroke:'#ff5252',strokeWidth:2,dot:{fill:'#ff5252',r:4},name:'Temporalis (mm)'}),
-            React.createElement(Legend,{wrapperStyle:{fontSize:10}}),
-          )
-        ),
+      // Frailty
+      e('div',{style:{background:'var(--s1)',borderRadius:14,padding:16,border:'1px solid var(--bdr)'}},
+        e('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:12}},
+          e('span',{style:{fontSize:12,fontWeight:700,color:'var(--amber)'}},'FRAILTY + TEMPORALIS'),
+          e('span',{style:{fontFamily:'var(--m)',fontSize:18,fontWeight:800,color:'var(--amber)'}},'CFS 5')),
+        e(MiniChart,{data:FR_H,dataKey:'f',color:'#ffab40',data2Key:'t',color2:'#ff5252',refLine:10,refLabel:'Sarcopenia',refColor:'#ff5252'})
       ),
-      // Baseline Comparison
-      React.createElement('div',{style:{background:'var(--s1)',borderRadius:14,padding:18,border:'1px solid var(--bdr)'}},
-        React.createElement('div',{style:{fontSize:12,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--teal)',marginBottom:14}},'Baseline vs Current'),
-        React.createElement(ResponsiveContainer,{width:'100%',height:180},
-          React.createElement(BarChart,{data:[
-            {metric:'GCS',baseline:11,current:15},{metric:'CFS',baseline:4,current:5},
-            {metric:'CAM',baseline:5,current:3},{metric:'Grip(kg)',baseline:16.1,current:14.2},
-            {metric:'Temp(mm)',baseline:9.2,current:7.8},
-          ],style:chartStyle},
-            React.createElement(CartesianGrid,{strokeDasharray:'3 3',stroke:'#1a2640'}),
-            React.createElement(XAxis,{dataKey:'metric',stroke:'#5a6a85',tick:{fontSize:9}}),
-            React.createElement(YAxis,{stroke:'#5a6a85',tick:{fontSize:9}}),
-            React.createElement(Bar,{dataKey:'baseline',fill:'rgba(68,138,255,.4)',name:'Pre-Op Baseline',radius:[4,4,0,0]}),
-            React.createElement(Bar,{dataKey:'current',fill:'rgba(29,233,182,.5)',name:'Current (Day 2)',radius:[4,4,0,0]}),
-            React.createElement(Legend,{wrapperStyle:{fontSize:10}}),
-          )
-        ),
-      ),
+      // Baseline vs Current
+      e('div',{style:{background:'var(--s1)',borderRadius:14,padding:16,border:'1px solid var(--bdr)'}},
+        e('div',{style:{fontSize:12,fontWeight:700,color:'var(--teal)',marginBottom:12}},'BASELINE vs CURRENT'),
+        e(BarChart2,{data:[{m:'GCS',b:11,c:15},{m:'CFS',b:4,c:5},{m:'CAM',b:5,c:3},{m:'Grip',b:16.1,c:14.2},{m:'Temp',b:9.2,c:7.8}]})
+      )
     ),
-    // Integration pipeline
-    React.createElement('div',{style:{marginTop:16,background:'var(--s1)',borderRadius:14,padding:18,border:'1px solid var(--bdr)'}},
-      React.createElement('div',{style:{fontSize:12,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--teal)',marginBottom:14}},'PredictWell CommandOS Integration Pipeline'),
-      React.createElement('div',{style:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}},
-        ['Multi-Camera Capture','→','Edge AI (CNN+LSTM)','→','Assessment Scoring','→','CommandOS Dashboard','→','EHR (HL7 FHIR)','→','UPI Longitudinal DB'].map((s,i)=>
-          s==='→'?React.createElement('span',{key:i,style:{color:'var(--teal)',fontSize:18}},'→'):
-          React.createElement('div',{key:i,style:{padding:'8px 14px',borderRadius:8,background:'var(--tealG)',border:'1px solid rgba(29,233,182,.15)',fontSize:11,fontWeight:600,color:'var(--teal)',fontFamily:'var(--m)'}},s)
-        )
-      ),
-    ),
+    // Pipeline
+    e('div',{style:{marginTop:14,background:'var(--s1)',borderRadius:14,padding:16,border:'1px solid var(--bdr)'}},
+      e('div',{style:{fontSize:12,fontWeight:700,color:'var(--teal)',marginBottom:12}},'PREDICTWELL COMMANDOS PIPELINE'),
+      e('div',{style:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}},
+        ['Multi-Camera','\u2192','Edge AI (CNN+LSTM)','\u2192','Assessment Scoring','\u2192','CommandOS','\u2192','EHR (HL7 FHIR)','\u2192','UPI Longitudinal DB'].map(function(s,i){
+          return s==='\u2192'?e('span',{key:i,style:{color:'var(--teal)',fontSize:18}},'\u2192'):
+            e('div',{key:i,style:{padding:'8px 12px',borderRadius:8,background:'var(--tealG)',border:'1px solid rgba(29,233,182,.15)',fontSize:10,fontWeight:600,color:'var(--teal)',fontFamily:'var(--m)'}},s);
+        })
+      )
+    )
   );
 }
 
-// ═══════════════════════════════════════
-// APP
-// ═══════════════════════════════════════
+// ═══ APP ═══
 function App(){
-  const [screen,setScreen]=useState('assess');
-  return React.createElement('div',{style:{height:'100vh',display:'flex',flexDirection:'column',background:'var(--bg)'}},
-    React.createElement(TopBar,{screen,setScreen}),
-    React.createElement('div',{style:{flex:1,display:'flex',overflow:'hidden'}},
-      screen==='assess' && React.createElement(AssessmentScreen),
-      screen==='alerts' && React.createElement(AlertsScreen),
-      screen==='history' && React.createElement(HistoryScreen),
+  var st=H('assess'),screen=st[0],setScreen=st[1];
+  var tm=H(''),time=tm[0],setTime=tm[1];
+  E(function(){var i=setInterval(function(){setTime(new Date().toTimeString().split(' ')[0])},1000);return function(){clearInterval(i)};},[]);
+
+  var tabs=[{id:'assess',label:'Live Assessment',icon:'\u25C9'},{id:'alerts',label:'Clinical Alerts',icon:'\u26A0'},{id:'history',label:'Patient History',icon:'\uD83D\uDCC8'}];
+
+  return e('div',{style:{height:'100vh',display:'flex',flexDirection:'column',background:'var(--bg)'}},
+    // Topbar
+    e('div',{style:{height:54,background:'var(--s1)',borderBottom:'1px solid var(--bdr)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 18px',flexShrink:0}},
+      e('div',{style:{display:'flex',alignItems:'center',gap:12}},
+        e('div',{style:{width:34,height:34,borderRadius:9,background:'linear-gradient(135deg,var(--teal2),var(--teal))',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,fontSize:13,color:'#000'}},'N'),
+        e('div',{style:{fontWeight:800,fontSize:15,letterSpacing:-.3}},'NeuroCheck',e('span',{style:{color:'var(--teal)'}},'AI')),
+        e('span',{style:{fontFamily:'var(--m)',fontSize:10,background:'var(--tealG)',color:'var(--teal)',padding:'3px 8px',borderRadius:6,border:'1px solid rgba(29,233,182,.15)',fontWeight:600}},'PROTOTYPE')),
+      e('div',{style:{display:'flex',gap:2}},
+        tabs.map(function(t){return e('button',{key:t.id,onClick:function(){setScreen(t.id)},style:{padding:'7px 14px',borderRadius:7,border:'1px solid '+(screen===t.id?'var(--teal)':'transparent'),background:screen===t.id?'var(--tealG)':'transparent',color:screen===t.id?'var(--teal)':'var(--tx2)',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'var(--f)',display:'flex',alignItems:'center',gap:5,transition:'all .2s'}},t.icon,' ',t.label)})
+      ),
+      e('div',{style:{display:'flex',alignItems:'center',gap:12}},
+        e('span',{style:{fontFamily:'var(--m)',fontSize:9,color:'var(--tx3)',background:'var(--s2)',padding:'4px 8px',borderRadius:5,border:'1px solid var(--bdr)'}},'Patent: AI Assessment + Continuous Monitoring'),
+        e('div',{style:{display:'flex',alignItems:'center',gap:5}},
+          e('div',{style:{width:7,height:7,borderRadius:'50%',background:'var(--green)',boxShadow:'0 0 8px var(--green)',animation:'pulse 2s infinite'}}),
+          e('span',{style:{fontSize:12,color:'var(--green)',fontWeight:600}},'Active')),
+        e('span',{style:{fontFamily:'var(--m)',fontSize:13,color:'var(--tx2)'}},time))
     ),
+    // Content
+    e('div',{style:{flex:1,display:'flex',overflow:'hidden'}},
+      screen==='assess'&&e(AssessmentScreen),
+      screen==='alerts'&&e(AlertsScreen),
+      screen==='history'&&e(HistoryScreen)
+    )
   );
 }
 
-ReactDOM.render(React.createElement(App),document.getElementById('root'));
+ReactDOM.render(e(App),document.getElementById('root'));
 </script>
 </body>
 </html>
