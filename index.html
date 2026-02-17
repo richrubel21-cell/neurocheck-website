@@ -664,19 +664,21 @@
       <div class="contact-form">
         <h3>Send Us a Message</h3>
         <p class="cf-sub">Fill out the form and our team will respond promptly.</p>
-        <form onsubmit="return false">
+        <form action="https://formsubmit.co/info@neurocheckai.com" method="POST">
+          <input type="hidden" name="_subject" value="New NeuroCheck AI Inquiry">
+          <input type="hidden" name="_captcha" value="false">
+          <input type="hidden" name="_next" value="https://neurocheckai.com">
           <div class="cf-grid">
-            <div class="cf-field"><label>Full Name</label><input name="name" placeholder="Jane Doe"/></div>
-            <div class="cf-field"><label>Email</label><input name="email" type="email" placeholder="jane@hospital.org"/></div>
+            <div class="cf-field"><label>Full Name</label><input name="name" placeholder="Jane Doe" required/></div>
+            <div class="cf-field"><label>Email</label><input name="email" type="email" placeholder="jane@hospital.org" required/></div>
             <div class="cf-field"><label>Organization</label><input name="org" placeholder="Hospital / Clinic / Fund"/></div>
             <div class="cf-field"><label>Interest</label><select name="interest"><option>Clinical pilot / evaluation</option><option>Research collaboration</option><option>Investor interest</option><option>Other</option></select></div>
-            <div class="cf-field full"><label>Message</label><textarea name="msg" placeholder="Tell us what you're interested in..."></textarea></div>
+            <div class="cf-field full"><label>Message</label><textarea name="message" placeholder="Tell us what you're interested in..."></textarea></div>
           </div>
           <div class="cf-actions">
-            <button class="cf-submit" type="button" onclick="submitForm(this)">Submit Request →</button>
-            <a class="cf-alt" href="mailto:info@neurocheckai.com?subject=NeuroCheck%20AI%20Inquiry">Or Email Directly</a>
+            <button class="cf-submit" type="submit">Submit Request →</button>
+            <a class="cf-alt" href="mailto:info@neurocheckai.com?subject=NeuroCheck%20AI%20Inquiry">Email Directly</a>
           </div>
-          <div class="cf-note" id="formStatus">Static preview — form will be connected on deployment.</div>
         </form>
       </div>
     </div>
@@ -716,12 +718,7 @@ window.addEventListener('scroll',()=>{
 });
 
 // Form
-function submitForm(btn){
-  const st=document.getElementById('formStatus');
-  btn.textContent='✓ Sent Successfully';btn.style.background='linear-gradient(135deg,#077A70,#089488)';
-  st.textContent='Thank you! Your request has been received (preview mode).';
-  setTimeout(()=>{btn.textContent='Submit Request →';btn.style.background=''},3500);
-}
+// Form submitted via Formsubmit.co
 
 // Parallax on hero floating cards
 document.addEventListener('mousemove',e=>{
