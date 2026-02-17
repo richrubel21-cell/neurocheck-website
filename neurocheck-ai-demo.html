@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NeuroCheck AI — Clinical Assessment Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0e17;--surface:#111827;--surface2:#1a2332;--surface3:#232f42;
+  --border:#2a3a52;--border2:#1e2d42;
+  --text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;
+  --teal:#22d3a8;--teal2:#0d9488;--tealGlow:rgba(34,211,168,.15);
+  --red:#ef4444;--amber:#f59e0b;--blue:#3b82f6;--purple:#8b5cf6;
+  --green:#10b981;
+  --font:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font);background:var(--bg);color:var(--text)}
+
+.app{display:grid;grid-template-columns:280px 1fr 320px;grid-template-rows:56px 1fr 220px;height:100vh;gap:1px;background:var(--border2)}
+.topbar{grid-column:1/-1;background:var(--surface);display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid var(--border)}
+.sidebar{background:var(--surface);overflow-y:auto;padding:16px}
+.main{background:#050810;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.right{background:var(--surface);overflow-y:auto;padding:16px}
+.bottom{grid-column:1/-1;background:var(--surface);display:grid;grid-template-columns:1fr 1fr;gap:1px;border-top:1px solid var(--border)}
+
+/* Topbar */
+.logo-area{display:flex;align-items:center;gap:12px}
+.logo-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--teal2),var(--teal));display:flex;align-items:center;justify-content:center}
+.logo-icon svg{width:20px;height:20px;fill:#fff}
+.logo-text{font-weight:800;font-size:16px;letter-spacing:-.3px}
+.logo-text span{color:var(--teal)}
+.logo-badge{font-family:var(--mono);font-size:10px;background:var(--tealGlow);color:var(--teal);padding:3px 8px;border-radius:6px;border:1px solid rgba(34,211,168,.2);font-weight:600}
+.top-status{display:flex;align-items:center;gap:16px}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.top-time{font-family:var(--mono);font-size:13px;color:var(--text2)}
+.top-btn{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;font-family:var(--font)}
+.top-btn:hover{border-color:var(--teal);color:var(--teal)}
+.top-btn.rec{background:rgba(239,68,68,.15);border-color:var(--red);color:var(--red)}
+.patent-tag{font-family:var(--mono);font-size:9px;color:var(--text3);background:var(--surface2);padding:4px 10px;border-radius:6px;border:1px solid var(--border)}
+
+/* Sidebar */
+.section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.patient-card{background:var(--surface2);border-radius:12px;padding:14px;margin-bottom:14px;border:1px solid var(--border)}
+.patient-name{font-weight:700;font-size:15px;margin-bottom:2px}
+.patient-meta{font-size:11px;color:var(--text3);font-family:var(--mono)}
+.patient-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px}
+.ptag{font-size:10px;padding:3px 8px;border-radius:6px;font-weight:600;font-family:var(--mono)}
+.ptag.icu{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.ptag.frail{background:rgba(245,158,11,.1);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+.ptag.post{background:rgba(59,130,246,.1);color:var(--blue);border:1px solid rgba(59,130,246,.2)}
+.assess-list{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.assess-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;transition:all .25s}
+.assess-item:hover{border-color:var(--teal);background:var(--tealGlow)}
+.assess-item.active{border-color:var(--teal);background:var(--tealGlow);box-shadow:0 0 20px rgba(34,211,168,.08)}
+.assess-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.assess-icon.cn{background:rgba(139,92,246,.15)}
+.assess-icon.gcs{background:rgba(59,130,246,.15)}
+.assess-icon.del{background:rgba(239,68,68,.15)}
+.assess-icon.fr{background:rgba(245,158,11,.15)}
+.assess-label{font-size:12px;font-weight:600}
+.assess-sub{font-size:10px;color:var(--text3);margin-top:1px}
+.hw-box{font-size:11px;color:var(--text2);line-height:1.7;padding:10px 12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)}
+.hw-box strong{color:var(--text)}
+.hw-title{font-weight:700;color:var(--teal);margin-bottom:6px;font-family:var(--mono);font-size:10px;letter-spacing:.5px}
+
+/* Main Canvas */
+canvas#face{display:block}
+.vid-ui{position:absolute;inset:0;pointer-events:none}
+.cam-tag{position:absolute;top:14px;left:14px;display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.65);backdrop-filter:blur(10px);padding:6px 14px;border-radius:8px;font-size:11px;font-family:var(--mono);color:var(--text)}
+.cam-tag .rec-dot{width:8px;height:8px;border-radius:50%;background:var(--red);animation:blink 1s infinite}
+.cam-fps{position:absolute;top:14px;right:14px;background:rgba(0,0,0,.65);backdrop-filter:blur(10px);padding:6px 14px;border-radius:8px;font-size:11px;font-family:var(--mono);color:var(--teal)}
+.cn-prompt-box{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.88);backdrop-filter:blur(16px);padding:26px 40px;border-radius:18px;text-align:center;border:1px solid var(--teal);box-shadow:0 0 60px rgba(34,211,168,.12);z-index:10;opacity:0;transition:opacity .4s}
+.cn-prompt-box.show{opacity:1}
+.cn-prompt-box h3{font-size:22px;margin-bottom:6px;color:var(--teal);font-weight:800}
+.cn-prompt-box p{font-size:13px;color:var(--text2);max-width:320px;line-height:1.5}
+.track-bar{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);backdrop-filter:blur(10px);padding:8px 22px;border-radius:10px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px;color:var(--teal)}
+.progress-ring{position:absolute;bottom:14px;right:14px;background:rgba(0,0,0,.65);backdrop-filter:blur(10px);padding:8px 14px;border-radius:8px;font-size:11px;font-family:var(--mono);color:var(--text2)}
+
+/* Right Panel */
+.score-card{background:var(--surface2);border-radius:12px;padding:14px;margin-bottom:10px;border:1px solid var(--border);transition:border-color .4s}
+.score-card.highlight{border-color:var(--teal);box-shadow:0 0 20px rgba(34,211,168,.08)}
+.score-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.score-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.score-badge{font-family:var(--mono);font-size:20px;font-weight:800;transition:all .3s}
+.score-badge.good{color:var(--green)}
+.score-badge.warn{color:var(--amber)}
+.score-badge.crit{color:var(--red)}
+.score-badge.na{color:var(--text3)}
+.score-bar{height:5px;border-radius:3px;background:var(--surface3);margin-bottom:8px;overflow:hidden}
+.score-bar-fill{height:100%;border-radius:3px;transition:width .8s cubic-bezier(.22,1,.36,1),background .4s}
+.score-items{display:flex;flex-direction:column;gap:5px}
+.score-item{display:flex;align-items:center;justify-content:space-between;font-size:11px}
+.score-item-label{color:var(--text2)}
+.score-item-val{font-family:var(--mono);font-weight:600;color:var(--text);transition:color .3s}
+.cn-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.cn-cell{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;background:var(--surface3);font-size:10px;font-family:var(--mono);transition:background .3s}
+.cn-cell.testing{background:rgba(245,158,11,.1)}
+.cn-cell.pass{background:rgba(16,185,129,.08)}
+.cn-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;transition:background .3s,box-shadow .3s}
+.cn-dot.pass{background:var(--green);box-shadow:0 0 6px var(--green)}
+.cn-dot.testing{background:var(--amber);animation:blink .8s infinite}
+.cn-dot.pending{background:var(--text3)}
+.cn-dot.fail{background:var(--red)}
+
+/* Bottom */
+.bottom-panel{padding:16px;overflow-y:auto}
+.bottom-panel h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:12px}
+.icu-room{position:relative;width:100%;height:155px;background:var(--surface2);border-radius:12px;border:1px solid var(--border);overflow:hidden}
+.icu-bed{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:110px;height:55px;background:var(--surface3);border-radius:8px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text3);font-weight:600}
+.icu-cam{position:absolute;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;z-index:2}
+.icu-cam.c1{top:10px;right:20px;background:rgba(59,130,246,.2);border:2px solid var(--blue);color:var(--blue)}
+.icu-cam.c2{bottom:10px;left:50%;transform:translateX(-50%);background:rgba(139,92,246,.2);border:2px solid var(--purple);color:var(--purple)}
+.icu-cam.c3{top:50%;left:10px;transform:translateY(-50%);background:rgba(34,211,168,.2);border:2px solid var(--teal);color:var(--teal)}
+.cam-fov{position:absolute;opacity:.06;pointer-events:none}
+.cam-fov.c1{top:0;right:0;width:160px;height:130px;background:radial-gradient(ellipse at top right,var(--blue),transparent 70%)}
+.cam-fov.c2{bottom:0;left:50%;transform:translateX(-50%);width:220px;height:110px;background:radial-gradient(ellipse at bottom center,var(--purple),transparent 70%)}
+.cam-fov.c3{top:50%;left:0;transform:translateY(-50%);width:130px;height:150px;background:radial-gradient(ellipse at center left,var(--teal),transparent 70%)}
+.icu-label{position:absolute;font-size:8px;font-family:var(--mono);font-weight:600;line-height:1.4}
+.icu-label.l1{top:40px;right:8px;color:var(--blue);text-align:right}
+.icu-label.l2{bottom:40px;left:50%;transform:translateX(-50%);color:var(--purple);text-align:center}
+.icu-label.l3{top:50%;left:40px;transform:translateY(-50%);color:var(--teal)}
+.flow-steps{display:flex;flex-direction:column;gap:6px}
+.flow-step{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);font-size:11px;transition:all .3s}
+.flow-step.active{border-color:var(--teal);background:var(--tealGlow)}
+.flow-num{width:22px;height:22px;border-radius:6px;background:var(--tealGlow);border:1px solid rgba(34,211,168,.2);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:10px;color:var(--teal);flex-shrink:0}
+.flow-tag{font-family:var(--mono);font-size:9px;background:var(--surface3);padding:2px 6px;border-radius:4px;color:var(--text3);margin-left:auto;flex-shrink:0}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="logo-area">
+      <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div>
+      <div><div class="logo-text">NeuroCheck<span>AI</span></div></div>
+      <div class="logo-badge">CLINICAL DEMO</div>
+    </div>
+    <div class="top-status">
+      <div class="patent-tag">Patent: AI-Based Assessment with Continuous Monitoring</div>
+      <div style="display:flex;align-items:center;gap:6px"><div class="status-dot"></div><span style="font-size:12px;color:var(--green);font-weight:600">Active</span></div>
+      <div class="top-time" id="clock">00:00:00</div>
+      <button class="top-btn rec" id="btnRec">⏺ REC</button>
+    </div>
+  </div>
+
+  <!-- LEFT SIDEBAR -->
+  <div class="sidebar">
+    <div class="section-title">Patient</div>
+    <div class="patient-card">
+      <div class="patient-name">Margaret Chen</div>
+      <div class="patient-meta">MRN: 7742901 • 74F • BMI 22.1</div>
+      <div class="patient-tags">
+        <span class="ptag icu">NEURO ICU 4B</span>
+        <span class="ptag frail">CFS 5</span>
+        <span class="ptag post">POST-OP DAY 2</span>
+      </div>
+      <div style="margin-top:10px;font-size:10px;color:var(--text3);line-height:1.6;font-family:var(--mono)">
+        Dx: L MCA aneurysm clipping<br>
+        Hx: HTN, T2DM, mild cognitive impairment<br>
+        Attending: Dr. C. Bowers, MD
+      </div>
+    </div>
+
+    <div class="section-title">Active Assessment</div>
+    <div class="assess-list">
+      <div class="assess-item active" id="assess-cn">
+        <div class="assess-icon cn">🧠</div>
+        <div><div class="assess-label">Cranial Nerve Testing</div><div class="assess-sub">CN II – XII Automated</div></div>
+      </div>
+      <div class="assess-item" id="assess-gcs">
+        <div class="assess-icon gcs">📊</div>
+        <div><div class="assess-label">Glasgow Coma Scale</div><div class="assess-sub">Eye • Verbal • Motor</div></div>
+      </div>
+      <div class="assess-item" id="assess-del">
+        <div class="assess-icon del">⚠️</div>
+        <div><div class="assess-label">Delirium Screen</div><div class="assess-sub">CAM-ICU-7 • ICDSC • RASS</div></div>
+      </div>
+      <div class="assess-item" id="assess-fr">
+        <div class="assess-icon fr">🦴</div>
+        <div><div class="assess-label">Frailty Assessment</div><div class="assess-sub">CFS • TUG • Sarcopenia</div></div>
+      </div>
+    </div>
+
+    <div class="section-title">Camera Hardware</div>
+    <div class="hw-box">
+      <div class="hw-title">ICU CONFIGURATION — PER PATENT</div>
+      <div>• <strong>Bedside:</strong> Intel RealSense D435i<br>&nbsp; Depth + RGB, 1280×720, 90fps</div>
+      <div>• <strong>Foot-of-Bed:</strong> Axis M3068-P<br>&nbsp; 12MP, 360° panoramic, IR</div>
+      <div>• <strong>Tablet:</strong> iPad Pro TrueDepth<br>&nbsp; Portable bedside assessment</div>
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--text3)">Edge compute: NVIDIA Jetson Orin Nano<br>Protocol: HL7 FHIR R4 + DICOM</div>
+    </div>
+  </div>
+
+  <!-- MAIN — Animated Face Canvas -->
+  <div class="main">
+    <canvas id="face" width="800" height="600"></canvas>
+    <div class="vid-ui">
+      <div class="cam-tag"><div class="rec-dot"></div>LIVE — CAM 1: Bedside Intel RealSense D435i</div>
+      <div class="cam-fps" id="fpsDisplay">30 FPS • 468 landmarks • CNN active</div>
+      <div class="cn-prompt-box" id="cnPrompt">
+        <h3 id="promptTitle">Initializing...</h3>
+        <p id="promptDesc">Starting assessment sequence</p>
+      </div>
+      <div class="track-bar" id="trackBar">
+        <div class="status-dot" style="width:6px;height:6px;background:var(--green);box-shadow:0 0 6px var(--green)"></div>
+        Face Detected — 468 Landmarks Tracked
+      </div>
+      <div class="progress-ring" id="progressRing">Assessment: 0%</div>
+    </div>
+  </div>
+
+  <!-- RIGHT — Scores -->
+  <div class="right">
+    <div class="section-title">Live Scoring</div>
+
+    <div class="score-card" id="cardGCS">
+      <div class="score-header">
+        <div class="score-title" style="color:var(--blue)">Glasgow Coma Scale</div>
+        <div class="score-badge na" id="gcsTotal">—</div>
+      </div>
+      <div class="score-bar"><div class="score-bar-fill" id="gcsBar" style="width:0%;background:var(--blue)"></div></div>
+      <div class="score-items">
+        <div class="score-item"><span class="score-item-label">Eye Opening (E)</span><span class="score-item-val" id="gcsE">—</span></div>
+        <div class="score-item"><span class="score-item-label">Verbal Response (V)</span><span class="score-item-val" id="gcsV">—</span></div>
+        <div class="score-item"><span class="score-item-label">Motor Response (M)</span><span class="score-item-val" id="gcsM">—</span></div>
+      </div>
+    </div>
+
+    <div class="score-card" id="cardCN">
+      <div class="score-header">
+        <div class="score-title" style="color:var(--purple)">Cranial Nerves</div>
+        <div class="score-badge na" id="cnCount">0/10</div>
+      </div>
+      <div class="cn-grid" id="cnGrid">
+        <div class="cn-cell" id="cellCN2"><div class="cn-dot pending" id="dotCN2"></div>CN II</div>
+        <div class="cn-cell" id="cellCN3"><div class="cn-dot pending" id="dotCN3"></div>CN III</div>
+        <div class="cn-cell" id="cellCN4"><div class="cn-dot pending" id="dotCN4"></div>CN IV</div>
+        <div class="cn-cell" id="cellCN5"><div class="cn-dot pending" id="dotCN5"></div>CN V</div>
+        <div class="cn-cell" id="cellCN6"><div class="cn-dot pending" id="dotCN6"></div>CN VI</div>
+        <div class="cn-cell" id="cellCN7"><div class="cn-dot pending" id="dotCN7"></div>CN VII</div>
+        <div class="cn-cell" id="cellCN9"><div class="cn-dot pending" id="dotCN9"></div>CN IX</div>
+        <div class="cn-cell" id="cellCN10"><div class="cn-dot pending" id="dotCN10"></div>CN X</div>
+        <div class="cn-cell" id="cellCN11"><div class="cn-dot pending" id="dotCN11"></div>CN XI</div>
+        <div class="cn-cell" id="cellCN12"><div class="cn-dot pending" id="dotCN12"></div>CN XII</div>
+      </div>
+    </div>
+
+    <div class="score-card" id="cardCAM">
+      <div class="score-header">
+        <div class="score-title" style="color:var(--red)">CAM-ICU-7 Delirium</div>
+        <div class="score-badge na" id="camScore">—</div>
+      </div>
+      <div class="score-bar"><div class="score-bar-fill" id="camBar" style="width:0%;background:var(--green)"></div></div>
+      <div class="score-items">
+        <div class="score-item"><span class="score-item-label">RASS Score</span><span class="score-item-val" id="rass">—</span></div>
+        <div class="score-item"><span class="score-item-label">Acute Onset/Fluctuation</span><span class="score-item-val" id="camAcute">—</span></div>
+        <div class="score-item"><span class="score-item-label">Inattention</span><span class="score-item-val" id="camInatt">—</span></div>
+        <div class="score-item"><span class="score-item-label">Disorganized Thinking</span><span class="score-item-val" id="camDisorg">—</span></div>
+        <div class="score-item"><span class="score-item-label">Altered Consciousness</span><span class="score-item-val" id="camAlter">—</span></div>
+      </div>
+    </div>
+
+    <div class="score-card" id="cardFrail">
+      <div class="score-header">
+        <div class="score-title" style="color:var(--amber)">Frailty Index</div>
+        <div class="score-badge na" id="frailScore">—</div>
+      </div>
+      <div class="score-bar"><div class="score-bar-fill" id="frailBar" style="width:0%;background:var(--amber)"></div></div>
+      <div class="score-items">
+        <div class="score-item"><span class="score-item-label">Clinical Frailty Scale</span><span class="score-item-val" id="cfs">—</span></div>
+        <div class="score-item"><span class="score-item-label">Temporalis Wasting</span><span class="score-item-val" id="tempM">—</span></div>
+        <div class="score-item"><span class="score-item-label">Grip Strength Est.</span><span class="score-item-val" id="grip">—</span></div>
+        <div class="score-item"><span class="score-item-label">Fall Risk (Hopkins)</span><span class="score-item-val" id="fall">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM -->
+  <div class="bottom">
+    <div class="bottom-panel">
+      <h3>ICU Room — Multi-Camera Configuration</h3>
+      <div class="icu-room">
+        <div class="cam-fov c1"></div><div class="cam-fov c2"></div><div class="cam-fov c3"></div>
+        <div class="icu-bed">🛏️ PATIENT</div>
+        <div class="icu-cam c1" title="Bedside Camera">📷</div>
+        <div class="icu-cam c2" title="Foot-of-Bed Camera">📷</div>
+        <div class="icu-cam c3" title="Room Camera">📷</div>
+        <div class="icu-label l1">CAM 1: Bedside<br>Face + CN Testing</div>
+        <div class="icu-label l2">CAM 2: Foot-of-Bed<br>Full Body + Gait/TUG</div>
+        <div class="icu-label l3">CAM 3: Room<br>Gross Motor + Falls</div>
+      </div>
+    </div>
+    <div class="bottom-panel">
+      <h3>PredictWell CommandOS Integration</h3>
+      <div class="flow-steps" id="flowSteps">
+        <div class="flow-step" id="flow1"><div class="flow-num">1</div><div>Multi-camera captures video + depth + audio</div><div class="flow-tag">CAPTURE</div></div>
+        <div class="flow-step" id="flow2"><div class="flow-num">2</div><div>Edge AI: CNN movement + RNN/LSTM temporal</div><div class="flow-tag">NEURAL NET</div></div>
+        <div class="flow-step" id="flow3"><div class="flow-num">3</div><div>Assessment models: GCS, CN, CAM-ICU, CFS</div><div class="flow-tag">SCORING</div></div>
+        <div class="flow-step" id="flow4"><div class="flow-num">4</div><div>Results → PredictWell CommandOS dashboard</div><div class="flow-tag">PLATFORM</div></div>
+        <div class="flow-step" id="flow5"><div class="flow-num">5</div><div>EHR sync via HL7 FHIR R4 + Digital Health Binder</div><div class="flow-tag">EHR</div></div>
+        <div class="flow-step" id="flow6"><div class="flow-num">6</div><div>UPI longitudinal tracking + predictive analytics</div><div class="flow-tag">OUTCOMES</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// NEUROCHECK AI — ANIMATED FACE DEMO
+// ══════════════════════════════════════
+
+const C = document.getElementById('face');
+const X = C.getContext('2d');
+let t = 0;
+let phase = 'idle'; // idle, cn2, cn3, ... cn12, gcs, delirium, frailty, complete
+let phaseT = 0;
+let cnIdx = 0;
+let totalProgress = 0;
+
+// Face parameters (animated)
+let eyeX=0, eyeY=0;         // iris offset
+let mouthOpen=0;             // 0-1
+let tongueOut=0;             // 0-1
+let smileAmount=0;           // 0-1
+let jawClench=0;             // 0-1
+let headTiltX=0, headTiltY=0; // head rotation
+let browRaise=0;             // 0-1
+let shoulderShrug=0;         // 0-1
+let blinkL=0, blinkR=0;     // 0-1 (1=closed)
+
+// Skin tone for realistic face
+const SKIN = '#d4a574';
+const SKIN_SHADOW = '#b8895c';
+const SKIN_HIGHLIGHT = '#e8c49a';
+const HAIR = '#3a2a1a';
+const LIP = '#c47070';
+const EYE_WHITE = '#f0ece8';
+const IRIS = '#5a7a4a';
+const PUPIL = '#1a1a1a';
+
+// CN test definitions
+const CN_TESTS = [
+  {id:'CN2', cn:'2', phase:'cn2',   prompt:'Look at the center point',    desc:'CN II — Assessing visual acuity via pupil response',      dur:3500, action:()=>{eyeX=0;eyeY=0;}},
+  {id:'CN3', cn:'3', phase:'cn3',   prompt:'Look UP',                     desc:'CN III — Oculomotor: superior eye movement tracking',     dur:3000, action:()=>{eyeY=-1;}},
+  {id:'CN4', cn:'4', phase:'cn4',   prompt:'Look DOWN and INWARD',        desc:'CN IV — Trochlear: inferior oblique movement',            dur:3000, action:()=>{eyeY=0.8;eyeX=0.3;}},
+  {id:'CN5', cn:'5', phase:'cn5',   prompt:'Clench your JAW',             desc:'CN V — Trigeminal: masseter muscle activation',           dur:3000, action:()=>{jawClench=1;}},
+  {id:'CN6', cn:'6', phase:'cn6',   prompt:'Look LEFT then RIGHT',        desc:'CN VI — Abducens: lateral rectus tracking',               dur:4000, action:()=>{/*animated in draw*/}},
+  {id:'CN7', cn:'7', phase:'cn7',   prompt:'SMILE widely',                desc:'CN VII — Facial: symmetry & expression analysis',         dur:3500, action:()=>{smileAmount=1;}},
+  {id:'CN9', cn:'9', phase:'cn9',   prompt:'Open mouth — say "AHHH"',     desc:'CN IX — Glossopharyngeal: palatal elevation check',       dur:3000, action:()=>{mouthOpen=0.8;}},
+  {id:'CN10',cn:'10',phase:'cn10',  prompt:'SWALLOW',                     desc:'CN X — Vagus: swallowing reflex evaluation',              dur:3000, action:()=>{/*animated*/}},
+  {id:'CN11',cn:'11',phase:'cn11',  prompt:'Shrug your SHOULDERS up',     desc:'CN XI — Spinal Accessory: trapezius assessment',          dur:3500, action:()=>{shoulderShrug=1;}},
+  {id:'CN12',cn:'12',phase:'cn12',  prompt:'Stick out your TONGUE',       desc:'CN XII — Hypoglossal: tongue movement & symmetry',        dur:3500, action:()=>{mouthOpen=0.5;tongueOut=1;}},
+];
+
+// Clock
+setInterval(()=>{document.getElementById('clock').textContent=new Date().toTimeString().split(' ')[0];},1000);
+
+// ── DRAW FACE ──
+function drawFace(){
+  const w=C.width, h=C.height;
+  const cx=w/2, cy=h/2-20;
+  const sc=Math.min(w/800,h/600);
+
+  X.clearRect(0,0,w,h);
+
+  // Background — ICU room ambience
+  const grad=X.createRadialGradient(cx,cy,50,cx,cy,450);
+  grad.addColorStop(0,'#0d1520');
+  grad.addColorStop(1,'#050810');
+  X.fillStyle=grad;
+  X.fillRect(0,0,w,h);
+
+  // Subtle scan lines
+  X.globalAlpha=0.03;
+  for(let y=0;y<h;y+=3){X.fillStyle='#fff';X.fillRect(0,y,w,1);}
+  X.globalAlpha=1;
+
+  X.save();
+  X.translate(cx,cy);
+  X.scale(sc,sc);
+
+  // Head tilt
+  X.save();
+  X.rotate(headTiltX*0.08);
+  X.translate(0,headTiltY*8);
+
+  // ─── Shoulders ───
+  const shY = 200 - shoulderShrug*25;
+  X.beginPath();
+  X.moveTo(-160,shY+40);
+  X.quadraticCurveTo(-120,shY,0,shY-10);
+  X.quadraticCurveTo(120,shY,160,shY+40);
+  X.lineTo(160,300);X.lineTo(-160,300);X.closePath();
+  // Hospital gown
+  const gownGrad=X.createLinearGradient(0,shY,0,300);
+  gownGrad.addColorStop(0,'#5a7a8a');gownGrad.addColorStop(1,'#3a5a6a');
+  X.fillStyle=gownGrad;X.fill();
+  X.strokeStyle='rgba(255,255,255,0.08)';X.lineWidth=1;X.stroke();
+
+  // Neck
+  X.beginPath();
+  X.moveTo(-30,155);X.lineTo(-35,shY);X.lineTo(35,shY);X.lineTo(30,155);X.closePath();
+  X.fillStyle=SKIN_SHADOW;X.fill();
+
+  // ─── Head shape ───
+  X.beginPath();
+  X.ellipse(0,0,105,130,0,0,Math.PI*2);
+  const skinGrad=X.createRadialGradient(-20,-20,10,0,0,130);
+  skinGrad.addColorStop(0,SKIN_HIGHLIGHT);skinGrad.addColorStop(0.6,SKIN);skinGrad.addColorStop(1,SKIN_SHADOW);
+  X.fillStyle=skinGrad;X.fill();
+
+  // ─── Hair ───
+  X.beginPath();
+  X.ellipse(0,-55,110,90,0,Math.PI,Math.PI*2);
+  X.fillStyle=HAIR;X.fill();
+  // Side hair
+  X.beginPath();X.ellipse(-105,-10,20,70,0.2,0,Math.PI*2);X.fillStyle=HAIR;X.fill();
+  X.beginPath();X.ellipse(105,-10,20,70,-0.2,0,Math.PI*2);X.fillStyle=HAIR;X.fill();
+
+  // ─── Ears ───
+  [-1,1].forEach(s=>{
+    X.beginPath();
+    X.ellipse(s*100,10,16,28,s*0.1,0,Math.PI*2);
+    X.fillStyle=SKIN;X.fill();
+    X.strokeStyle=SKIN_SHADOW;X.lineWidth=1.5;X.stroke();
+  });
+
+  // ─── Eyebrows ───
+  const browY = -60 - browRaise*12;
+  [-1,1].forEach(s=>{
+    X.beginPath();
+    X.moveTo(s*18,browY);
+    X.quadraticCurveTo(s*45,browY-10-browRaise*5,s*70,browY+4);
+    X.strokeStyle=HAIR;X.lineWidth=4;X.lineCap='round';X.stroke();
+  });
+
+  // ─── Eyes ───
+  const eyeBaseY = -30;
+  [-1,1].forEach(s=>{
+    const ex = s*42;
+    const blink = s<0?blinkL:blinkR;
+    const eyeH = 18*(1-blink);
+
+    // Eye white
+    X.beginPath();
+    X.ellipse(ex,eyeBaseY,26,eyeH,0,0,Math.PI*2);
+    X.fillStyle=EYE_WHITE;X.fill();
+    X.strokeStyle='rgba(0,0,0,0.15)';X.lineWidth=1;X.stroke();
+
+    if(eyeH>3){
+      // Iris
+      const irisX = ex + eyeX*12;
+      const irisY = eyeBaseY + eyeY*8;
+      X.beginPath();
+      X.arc(irisX,irisY,11,0,Math.PI*2);
+      const irisGrad=X.createRadialGradient(irisX-2,irisY-2,1,irisX,irisY,11);
+      irisGrad.addColorStop(0,'#7a9a6a');irisGrad.addColorStop(0.7,IRIS);irisGrad.addColorStop(1,'#3a5a2a');
+      X.fillStyle=irisGrad;X.fill();
+
+      // Pupil
+      X.beginPath();
+      X.arc(irisX,irisY,5,0,Math.PI*2);
+      X.fillStyle=PUPIL;X.fill();
+
+      // Highlight
+      X.beginPath();
+      X.arc(irisX-3,irisY-3,2.5,0,Math.PI*2);
+      X.fillStyle='rgba(255,255,255,0.8)';X.fill();
+    }
+
+    // Eyelids
+    X.beginPath();
+    X.ellipse(ex,eyeBaseY,27,19,0,0,Math.PI*2);
+    X.strokeStyle=SKIN_SHADOW;X.lineWidth=2;X.stroke();
+  });
+
+  // ─── Nose ───
+  X.beginPath();
+  X.moveTo(-2,-15);
+  X.quadraticCurveTo(-3,20,-14,35);
+  X.quadraticCurveTo(0,42,14,35);
+  X.quadraticCurveTo(3,20,2,-15);
+  X.strokeStyle='rgba(0,0,0,0.12)';X.lineWidth=1.5;X.stroke();
+  // Nostrils
+  X.beginPath();X.ellipse(-8,36,5,3.5,0.3,0,Math.PI*2);X.fillStyle=SKIN_SHADOW;X.fill();
+  X.beginPath();X.ellipse(8,36,5,3.5,-0.3,0,Math.PI*2);X.fillStyle=SKIN_SHADOW;X.fill();
+
+  // ─── Mouth ───
+  const mY = 70;
+  const mW = 35 + smileAmount*10;
+  const mH = 3 + mouthOpen*30;
+  const smCurve = smileAmount*15;
+
+  // Upper lip
+  X.beginPath();
+  X.moveTo(-mW,mY);
+  X.quadraticCurveTo(-mW*0.5,mY-8-smCurve,0,mY-4);
+  X.quadraticCurveTo(mW*0.5,mY-8-smCurve,mW,mY);
+  if(mouthOpen>0.05){
+    X.quadraticCurveTo(mW*0.5,mY+mH*0.4,0,mY+mH*0.3);
+    X.quadraticCurveTo(-mW*0.5,mY+mH*0.4,-mW,mY);
+  }
+  X.fillStyle=LIP;X.fill();
+
+  // Lower lip
+  if(mouthOpen>0.05){
+    X.beginPath();
+    X.moveTo(-mW+2,mY);
+    X.quadraticCurveTo(-mW*0.5,mY+mH,0,mY+mH+2);
+    X.quadraticCurveTo(mW*0.5,mY+mH,mW-2,mY);
+    X.quadraticCurveTo(mW*0.5,mY+mH*0.4,0,mY+mH*0.3);
+    X.quadraticCurveTo(-mW*0.5,mY+mH*0.4,-mW+2,mY);
+    X.fillStyle='#b85a5a';X.fill();
+
+    // Mouth interior
+    X.beginPath();
+    X.ellipse(0,mY+mH*0.5,mW*0.7,mH*0.4,0,0,Math.PI*2);
+    X.fillStyle='#2a0a0a';X.fill();
+
+    // Teeth
+    if(mouthOpen>0.2){
+      X.beginPath();
+      X.rect(-mW*0.55,mY+2,mW*1.1,Math.min(mH*0.25,10));
+      X.fillStyle='#f0f0e8';X.fill();
+    }
+  }else{
+    // Closed mouth
+    X.beginPath();
+    X.moveTo(-mW,mY);
+    X.quadraticCurveTo(0,mY+4+smCurve,mW,mY);
+    X.strokeStyle=LIP;X.lineWidth=3;X.lineCap='round';X.stroke();
+  }
+
+  // ─── Tongue ───
+  if(tongueOut>0.1){
+    X.beginPath();
+    const tLen=tongueOut*35;
+    X.ellipse(0,mY+mH+tLen*0.5,14,tLen*0.6,0,0,Math.PI*2);
+    X.fillStyle='#d87070';X.fill();
+    X.strokeStyle='#c06060';X.lineWidth=1;X.stroke();
+    // Center line
+    X.beginPath();X.moveTo(0,mY+mH);X.lineTo(0,mY+mH+tLen);
+    X.strokeStyle='rgba(0,0,0,0.1)';X.lineWidth=1;X.stroke();
+  }
+
+  // Jaw clench visual — temporal muscle bulge
+  if(jawClench>0.1){
+    [-1,1].forEach(s=>{
+      X.beginPath();
+      X.ellipse(s*90,15,8+jawClench*6,20,s*0.2,0,Math.PI*2);
+      X.fillStyle=`rgba(${180+jawClench*40},${140+jawClench*20},${100},0.4)`;
+      X.fill();
+    });
+  }
+
+  X.restore(); // head tilt
+
+  // ══════════════════════════
+  // AI TRACKING OVERLAYS
+  // ══════════════════════════
+
+  // Face mesh grid
+  X.globalAlpha=0.12;
+  X.strokeStyle='#22d3a8';
+  X.lineWidth=0.5;
+  for(let i=-8;i<=8;i++){
+    X.beginPath();
+    X.moveTo(i*14,-140);X.lineTo(i*14,160);X.stroke();
+    X.beginPath();
+    X.moveTo(-120,i*18);X.lineTo(120,i*18);X.stroke();
+  }
+  X.globalAlpha=1;
+
+  // Face oval tracking
+  X.beginPath();
+  X.ellipse(0,0,110,135,0,0,Math.PI*2);
+  X.strokeStyle='rgba(34,211,168,0.5)';X.lineWidth=2;
+  X.setLineDash([8,4]);X.stroke();X.setLineDash([]);
+
+  // Eye tracking boxes
+  [-1,1].forEach(s=>{
+    X.strokeStyle='rgba(59,130,246,0.6)';X.lineWidth=1.5;
+    X.strokeRect(s*42-30,-52,60,44);
+    // Iris tracking circle
+    X.beginPath();
+    X.arc(s*42+eyeX*12,-30+eyeY*8,14,0,Math.PI*2);
+    X.strokeStyle='rgba(139,92,246,0.7)';X.lineWidth=1.5;X.stroke();
+  });
+
+  // Mouth tracking box
+  X.strokeStyle='rgba(239,68,68,0.5)';X.lineWidth=1.5;
+  X.strokeRect(-50,55,100,50+mouthOpen*30);
+
+  // Key landmark dots
+  const landmarks=[
+    [0,-130],[0,135],[-105,0],[105,0], // top,bottom,left,right
+    [-42,-30],[42,-30], // eyes
+    [0,35], // nose tip
+    [0,70+mouthOpen*15], // mouth center
+    [-42+eyeX*12,-30+eyeY*8],[42+eyeX*12,-30+eyeY*8], // iris
+    [-75,15],[75,15], // cheekbones
+    [0,-60], // forehead
+    [-30,155],[30,155], // neck
+    [-90,200-shoulderShrug*25],[90,200-shoulderShrug*25] // shoulders
+  ];
+  landmarks.forEach(([lx,ly])=>{
+    X.beginPath();X.arc(lx,ly,3,0,Math.PI*2);
+    X.fillStyle='rgba(34,211,168,0.85)';X.fill();
+    X.beginPath();X.arc(lx,ly,6,0,Math.PI*2);
+    X.strokeStyle='rgba(34,211,168,0.3)';X.lineWidth=1;X.stroke();
+  });
+
+  // Connection lines between landmarks
+  X.strokeStyle='rgba(34,211,168,0.15)';X.lineWidth=0.8;
+  const connections=[[0,1],[2,3],[4,5],[4,12],[5,12],[6,7],[10,4],[11,5],[13,14],[15,13],[16,14]];
+  connections.forEach(([a,b])=>{
+    X.beginPath();X.moveTo(landmarks[a][0],landmarks[a][1]);
+    X.lineTo(landmarks[b][0],landmarks[b][1]);X.stroke();
+  });
+
+  // Measurement labels
+  X.font='9px "JetBrains Mono"';X.fillStyle='rgba(34,211,168,0.6)';
+  X.fillText('EYE_L',  -72,-55);
+  X.fillText('EYE_R',   18,-55);
+  X.fillText('MOUTH',   55,65);
+  X.fillText('NOSE',    20,30);
+  X.fillText(`IRIS_DX: ${(eyeX*12).toFixed(1)}`,  -100,-10);
+  X.fillText(`IRIS_DY: ${(eyeY*8).toFixed(1)}`,   55,-10);
+  X.fillText(`MOUTH_OPEN: ${mouthOpen.toFixed(2)}`, 55,85);
+  if(tongueOut>0.1) X.fillText(`TONGUE: ${tongueOut.toFixed(2)}`, 55,100);
+  if(jawClench>0.1) X.fillText(`JAW: ${jawClench.toFixed(2)}`, -100,25);
+  if(shoulderShrug>0.1) X.fillText(`SHRUG: ${shoulderShrug.toFixed(2)}`, -110,195);
+
+  X.restore();
+}
+
+// ── ANIMATION LOOP ──
+function animate(){
+  t++;
+
+  // Natural idle animations
+  const idleBlink = Math.random()<0.008;
+  if(idleBlink && blinkL<0.1){blinkL=1;blinkR=1;setTimeout(()=>{blinkL=0;blinkR=0;},150);}
+
+  // Smooth parameter transitions
+  if(phase==='cn6'){
+    // Look left then right
+    const p=phaseT/120;
+    eyeX = p<0.5 ? Math.sin(p*Math.PI*2)*-1 : Math.sin(p*Math.PI*2)*1;
+  }
+  if(phase==='cn10'){
+    // Swallowing animation
+    const p=(phaseT%60)/60;
+    headTiltY = Math.sin(p*Math.PI)*0.3;
+    browRaise = Math.sin(p*Math.PI)*0.2;
+  }
+
+  // Breathing
+  headTiltY += Math.sin(t*0.015)*0.05;
+
+  drawFace();
+  phaseT++;
+  requestAnimationFrame(animate);
+}
+
+// ── CN TEST SEQUENCE ──
+function runCNTests(){
+  cnIdx=0;
+  runNextCN();
+}
+
+function runNextCN(){
+  if(cnIdx>=CN_TESTS.length){
+    phase='post-cn';
+    hidePrompt();
+    // Continue to GCS
+    setTimeout(runGCS,1500);
+    return;
+  }
+
+  const test=CN_TESTS[cnIdx];
+  phase=test.phase;
+  phaseT=0;
+
+  // Reset face params
+  resetFace();
+  test.action();
+
+  // UI Updates
+  showPrompt(test.prompt,test.desc);
+  setAssessActive('cn');
+
+  // Set dot to testing
+  const dot=document.getElementById('dotCN'+test.cn);
+  const cell=document.getElementById('cellCN'+test.cn);
+  if(dot){dot.className='cn-dot testing';}
+  if(cell){cell.className='cn-cell testing';}
+
+  // Highlight card
+  document.getElementById('cardCN').classList.add('highlight');
+
+  setTimeout(()=>{
+    // Mark pass
+    if(dot){dot.className='cn-dot pass';}
+    if(cell){cell.className='cn-cell pass';}
+    document.getElementById('cnCount').textContent=(cnIdx+1)+'/10';
+    document.getElementById('cnCount').className='score-badge good';
+    totalProgress = Math.round(((cnIdx+1)/16)*100);
+    document.getElementById('progressRing').textContent='Assessment: '+totalProgress+'%';
+
+    cnIdx++;
+    resetFace();
+    setTimeout(runNextCN,500);
+  },test.dur);
+}
+
+function runGCS(){
+  setAssessActive('gcs');
+  document.getElementById('cardGCS').classList.add('highlight');
+  document.getElementById('cardCN').classList.remove('highlight');
+  showPrompt('Assessing GCS','Eye Opening • Verbal Response • Motor Response');
+
+  // Animate flow steps
+  document.getElementById('flow1').classList.add('active');
+  setTimeout(()=>document.getElementById('flow2').classList.add('active'),800);
+  setTimeout(()=>document.getElementById('flow3').classList.add('active'),1600);
+
+  setTimeout(()=>{
+    document.getElementById('gcsE').textContent='4';
+    document.getElementById('gcsE').style.color='var(--green)';
+    browRaise=0.3; // eyes open wide
+  },1500);
+  setTimeout(()=>{
+    document.getElementById('gcsV').textContent='5';
+    document.getElementById('gcsV').style.color='var(--green)';
+    mouthOpen=0.15;smileAmount=0.2;
+  },3000);
+  setTimeout(()=>{
+    document.getElementById('gcsM').textContent='6';
+    document.getElementById('gcsM').style.color='var(--green)';
+  },4500);
+  setTimeout(()=>{
+    document.getElementById('gcsTotal').textContent='15/15';
+    document.getElementById('gcsTotal').className='score-badge good';
+    document.getElementById('gcsBar').style.width='100%';
+    document.getElementById('gcsBar').style.background='var(--green)';
+    totalProgress=75;
+    document.getElementById('progressRing').textContent='Assessment: 75%';
+    resetFace();
+    setTimeout(runDelirium,1500);
+  },6000);
+}
+
+function runDelirium(){
+  setAssessActive('del');
+  document.getElementById('cardCAM').classList.add('highlight');
+  document.getElementById('cardGCS').classList.remove('highlight');
+  showPrompt('CAM-ICU-7 Screening','Evaluating attention, awareness, and organized thinking');
+
+  setTimeout(()=>{
+    document.getElementById('rass').textContent='-1';
+    document.getElementById('rass').style.color='var(--amber)';
+  },1000);
+  setTimeout(()=>{
+    document.getElementById('camAcute').textContent='Yes';
+    document.getElementById('camAcute').style.color='var(--amber)';
+    // Show slight confusion — eyes wander
+    eyeX=0.4;eyeY=-0.2;
+  },2500);
+  setTimeout(()=>{
+    document.getElementById('camInatt').textContent='+1';
+    document.getElementById('camInatt').style.color='var(--amber)';
+    eyeX=-0.3;eyeY=0.1;
+  },4000);
+  setTimeout(()=>{
+    document.getElementById('camDisorg').textContent='No';
+    document.getElementById('camDisorg').style.color='var(--green)';
+    document.getElementById('camAlter').textContent='+1';
+    document.getElementById('camAlter').style.color='var(--amber)';
+  },5500);
+  setTimeout(()=>{
+    document.getElementById('camScore').textContent='3/7';
+    document.getElementById('camScore').className='score-badge warn';
+    document.getElementById('camBar').style.width='43%';
+    document.getElementById('camBar').style.background='var(--amber)';
+    totalProgress=87;
+    document.getElementById('progressRing').textContent='Assessment: 87%';
+    resetFace();
+    setTimeout(runFrailty,1500);
+  },7000);
+}
+
+function runFrailty(){
+  setAssessActive('fr');
+  document.getElementById('cardFrail').classList.add('highlight');
+  document.getElementById('cardCAM').classList.remove('highlight');
+  showPrompt('Frailty Assessment','CFS scoring via temporalis analysis + movement patterns');
+
+  // Animate flow steps 4-6
+  setTimeout(()=>document.getElementById('flow4').classList.add('active'),500);
+  setTimeout(()=>document.getElementById('flow5').classList.add('active'),1300);
+  setTimeout(()=>document.getElementById('flow6').classList.add('active'),2100);
+
+  setTimeout(()=>{
+    document.getElementById('cfs').textContent='5/9';
+    document.getElementById('cfs').style.color='var(--amber)';
+    // Show temporalis wasting detection
+    jawClench=0.2;
+  },1500);
+  setTimeout(()=>{
+    document.getElementById('tempM').textContent='7.8mm (↓)';
+    document.getElementById('tempM').style.color='var(--red)';
+  },3000);
+  setTimeout(()=>{
+    document.getElementById('grip').textContent='14.2 kg (↓)';
+    document.getElementById('grip').style.color='var(--red)';
+  },4500);
+  setTimeout(()=>{
+    document.getElementById('fall').textContent='HIGH';
+    document.getElementById('fall').style.color='var(--red)';
+  },5500);
+  setTimeout(()=>{
+    document.getElementById('frailScore').textContent='5/9';
+    document.getElementById('frailScore').className='score-badge warn';
+    document.getElementById('frailBar').style.width='56%';
+    totalProgress=100;
+    document.getElementById('progressRing').textContent='Assessment: 100% ✓';
+    document.getElementById('progressRing').style.color='var(--teal)';
+    resetFace();
+    smileAmount=0.2;
+    setTimeout(showComplete,2000);
+  },7000);
+}
+
+function showComplete(){
+  document.getElementById('cardFrail').classList.remove('highlight');
+  showPrompt('✓ Assessment Complete','All results transmitted to PredictWell CommandOS → EHR');
+  document.querySelectorAll('.flow-step').forEach(el=>el.classList.add('active'));
+}
+
+// ── HELPERS ──
+function resetFace(){
+  eyeX=0;eyeY=0;mouthOpen=0;tongueOut=0;smileAmount=0;jawClench=0;
+  headTiltX=0;headTiltY=0;browRaise=0;shoulderShrug=0;
+}
+
+function showPrompt(title,desc){
+  const box=document.getElementById('cnPrompt');
+  document.getElementById('promptTitle').textContent=title;
+  document.getElementById('promptDesc').textContent=desc;
+  box.classList.add('show');
+}
+function hidePrompt(){
+  document.getElementById('cnPrompt').classList.remove('show');
+}
+
+function setAssessActive(id){
+  document.querySelectorAll('.assess-item').forEach(el=>el.classList.remove('active'));
+  const el=document.getElementById('assess-'+id);
+  if(el)el.classList.add('active');
+}
+
+// ── START ──
+function init(){
+  // Resize canvas
+  const main=document.querySelector('.main');
+  C.width=main.clientWidth;
+  C.height=main.clientHeight;
+  window.addEventListener('resize',()=>{C.width=main.clientWidth;C.height=main.clientHeight;});
+
+  animate();
+
+  // Start sequence after 2 seconds
+  setTimeout(()=>{
+    showPrompt('Initializing Assessment','Loading CNN + RNN/LSTM models...');
+    setTimeout(()=>runCNTests(),2000);
+  },1500);
+}
+
+init();
+</script>
+</body>
+</html>
