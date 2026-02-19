@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>CommandOS — Athletic Biomechanics Analysis</title>
+<title>CommandOS - Athletic Biomechanics Analysis</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=DM+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#060a11;--s1:#0c1220;--s2:#131c2e;--s3:#1a2640;--bdr:#1e2d45;--tx:#e8ecf4;--tx2:#8e9bb8;--tx3:#5a6a85;--orange:#ff6d00;--orangeG:rgba(255,109,0,.08);--teal:#1de9b6;--tealG:rgba(29,233,182,.08);--red:#ff5252;--amber:#ffab40;--blue:#448aff;--green:#69f0ae;--greenG:rgba(105,240,174,.08);--purple:#b388ff;--f:'DM Sans',sans-serif;--m:'IBM Plex Mono',monospace}
+:root{--bg:#060a11;--s1:#0c1220;--s2:#131c2e;--s3:#1a2640;--bdr:#1e2d45;--tx:#e8ecf4;--tx2:#8e9bb8;--tx3:#5a6a85;--orange:#ff6d00;--orangeG:rgba(255,109,0,.08);--teal:#1de9b6;--red:#ff5252;--amber:#ffab40;--blue:#448aff;--green:#69f0ae;--purple:#b388ff;--cyan:#00e5ff;--f:'DM Sans',sans-serif;--m:'IBM Plex Mono',monospace}
 html,body,#root{height:100%;overflow:hidden}
 body{font-family:var(--f);background:var(--bg);color:var(--tx);-webkit-font-smoothing:antialiased}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px}
@@ -22,66 +22,57 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);-webkit-font-smoo
 <script>
 var ce=React.createElement,us=React.useState,ue=React.useEffect,ur=React.useRef;
 
-/* Landmark indices */
 var NOSE=0,L_SH=11,R_SH=12,L_EL=13,R_EL=14,L_WR=15,R_WR=16;
 var L_HI=23,R_HI=24,L_KN=25,R_KN=26,L_AN=27,R_AN=28;
 var L_PI=17,R_PI=18,L_IN=19,R_IN=20,L_TH=21,R_TH=22;
 var L_HE=29,R_HE=30,L_FT=31,R_FT=32;
 
-var BONES=[
-[L_SH,R_SH],[L_HI,R_HI],[L_SH,L_EL],[L_EL,L_WR],[R_SH,R_EL],[R_EL,R_WR],
-[L_SH,L_HI],[R_SH,R_HI],[L_HI,L_KN],[L_KN,L_AN],[R_HI,R_KN],[R_KN,R_AN],
-[L_WR,L_PI],[L_WR,L_IN],[R_WR,R_PI],[R_WR,R_IN],
-[L_AN,L_HE],[L_AN,L_FT],[R_AN,R_HE],[R_AN,R_FT]
-];
+var H_WRIST=0,H_THUMB_TIP=4,H_INDEX_TIP=8,H_MID_TIP=12,H_RING_TIP=16,H_PINKY_TIP=20,H_MID_MCP=9;
+
+var HAND_BONES=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16],[0,17],[17,18],[18,19],[19,20],[5,9],[9,13],[13,17]];
+
+var BONES=[[L_SH,R_SH],[L_HI,R_HI],[L_SH,L_EL],[L_EL,L_WR],[R_SH,R_EL],[R_EL,R_WR],[L_SH,L_HI],[R_SH,R_HI],[L_HI,L_KN],[L_KN,L_AN],[R_HI,R_KN],[R_KN,R_AN],[L_WR,L_PI],[L_WR,L_IN],[R_WR,R_PI],[R_WR,R_IN],[L_AN,L_HE],[L_AN,L_FT],[R_AN,R_HE],[R_AN,R_FT]];
 
 function boneColor(a,b){
-  if((a===L_SH&&b===L_EL)||(a===L_EL&&b===L_WR)||(a===R_SH&&b===R_EL)||(a===R_EL&&b===R_WR))return'#448aff';
-  if((a===L_HI&&b===L_KN)||(a===L_KN&&b===L_AN)||(a===R_HI&&b===R_KN)||(a===R_KN&&b===R_AN))return'#1de9b6';
-  if((a===L_SH&&b===R_SH)||(a===L_HI&&b===R_HI)||(a===L_SH&&b===L_HI)||(a===R_SH&&b===R_HI))return'#ff6d00';
-  return'#ffab40';
+  if((a===L_SH&&b===L_EL)||(a===L_EL&&b===L_WR)||(a===R_SH&&b===R_EL)||(a===R_EL&&b===R_WR))return '#448aff';
+  if((a===L_HI&&b===L_KN)||(a===L_KN&&b===L_AN)||(a===R_HI&&b===R_KN)||(a===R_KN&&b===R_AN))return '#1de9b6';
+  if((a===L_SH&&b===R_SH)||(a===L_HI&&b===R_HI)||(a===L_SH&&b===L_HI)||(a===R_SH&&b===R_HI))return '#ff6d00';
+  return '#ffab40';
 }
 
-function angle(ax,ay,bx,by,cx,cy){
+function ang(ax,ay,bx,by,cx,cy){
   var abx=ax-bx,aby=ay-by,cbx=cx-bx,cby=cy-by;
-  var dot=abx*cbx+aby*cby;
+  var d=abx*cbx+aby*cby;
   var m1=Math.sqrt(abx*abx+aby*aby),m2=Math.sqrt(cbx*cbx+cby*cby);
   if(m1===0||m2===0)return 0;
-  var c=dot/(m1*m2);
-  return Math.round(Math.acos(Math.max(-1,Math.min(1,c)))*180/Math.PI);
+  return Math.round(Math.acos(Math.max(-1,Math.min(1,d/(m1*m2))))*180/Math.PI);
 }
 
 function dst(a,b){return Math.sqrt((a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y));}
 
-function analyze(lm,prev){
+function analyze(lm,prev,lH,rH){
   var p=function(i){return lm[i];};
   var r={};
-  r.elbL=angle(p(L_SH).x,p(L_SH).y,p(L_EL).x,p(L_EL).y,p(L_WR).x,p(L_WR).y);
-  r.elbR=angle(p(R_SH).x,p(R_SH).y,p(R_EL).x,p(R_EL).y,p(R_WR).x,p(R_WR).y);
-  r.shL=angle(p(L_HI).x,p(L_HI).y,p(L_SH).x,p(L_SH).y,p(L_EL).x,p(L_EL).y);
-  r.shR=angle(p(R_HI).x,p(R_HI).y,p(R_SH).x,p(R_SH).y,p(R_EL).x,p(R_EL).y);
-  r.knL=angle(p(L_HI).x,p(L_HI).y,p(L_KN).x,p(L_KN).y,p(L_AN).x,p(L_AN).y);
-  r.knR=angle(p(R_HI).x,p(R_HI).y,p(R_KN).x,p(R_KN).y,p(R_AN).x,p(R_AN).y);
-  r.hiL=angle(p(L_SH).x,p(L_SH).y,p(L_HI).x,p(L_HI).y,p(L_KN).x,p(L_KN).y);
-  r.hiR=angle(p(R_SH).x,p(R_SH).y,p(R_HI).x,p(R_HI).y,p(R_KN).x,p(R_KN).y);
-
+  r.elbL=ang(p(L_SH).x,p(L_SH).y,p(L_EL).x,p(L_EL).y,p(L_WR).x,p(L_WR).y);
+  r.elbR=ang(p(R_SH).x,p(R_SH).y,p(R_EL).x,p(R_EL).y,p(R_WR).x,p(R_WR).y);
+  r.shL=ang(p(L_HI).x,p(L_HI).y,p(L_SH).x,p(L_SH).y,p(L_EL).x,p(L_EL).y);
+  r.shR=ang(p(R_HI).x,p(R_HI).y,p(R_SH).x,p(R_SH).y,p(R_EL).x,p(R_EL).y);
+  r.knL=ang(p(L_HI).x,p(L_HI).y,p(L_KN).x,p(L_KN).y,p(L_AN).x,p(L_AN).y);
+  r.knR=ang(p(R_HI).x,p(R_HI).y,p(R_KN).x,p(R_KN).y,p(R_AN).x,p(R_AN).y);
+  r.hiL=ang(p(L_SH).x,p(L_SH).y,p(L_HI).x,p(L_HI).y,p(L_KN).x,p(L_KN).y);
+  r.hiR=ang(p(R_SH).x,p(R_SH).y,p(R_HI).x,p(R_HI).y,p(R_KN).x,p(R_KN).y);
   var hipA=Math.atan2(p(R_HI).y-p(L_HI).y,p(R_HI).x-p(L_HI).x)*180/Math.PI;
   var shA=Math.atan2(p(R_SH).y-p(L_SH).y,p(R_SH).x-p(L_SH).x)*180/Math.PI;
   r.sep=Math.round(Math.abs(shA-hipA));
-
   var hw=dst(p(L_HI),p(R_HI));
   var sw=dst(p(L_AN),p(R_AN));
   r.stride=hw>0?Math.round(sw/hw*100):0;
-
   r.armSlot=Math.round(Math.atan2(p(R_WR).y-p(R_SH).y,p(R_WR).x-p(R_SH).x)*180/Math.PI+90);
-
   var fmid=(p(L_AN).x+p(R_AN).x)/2;
   var cmid=(p(L_HI).x+p(R_HI).x)/2;
   var base=Math.abs(p(L_AN).x-p(R_AN).x);
   r.bal=base>0?Math.max(0,Math.min(100,Math.round((1-Math.abs(cmid-fmid)/base)*100))):50;
-
   r.kneeBend=Math.round((r.knL+r.knR)/2);
-
   if(prev){
     var lv=dst(p(L_WR),prev[L_WR]);
     var rv=dst(p(R_WR),prev[R_WR]);
@@ -89,23 +80,36 @@ function analyze(lm,prev){
     r.velR=Math.round(rv*10000)/10;
     r.maxV=Math.round(Math.max(lv,rv)*10000)/10;
     r.mph=Math.round(Math.max(lv,rv)*10000*0.8);
-  }else{r.velL=0;r.velR=0;r.maxV=0;r.mph=0;}
+  } else {
+    r.velL=0;r.velR=0;r.maxV=0;r.mph=0;
+  }
+  r.lHT=!!(lH&&lH.length>=21);
+  r.rHT=!!(rH&&rH.length>=21);
+  r.hc=(r.lHT?21:0)+(r.rHT?21:0);
+  r.tLM=33+r.hc;
+  r.gL=0;r.gR=0;r.wL=0;r.wR=0;r.fL=0;r.fR=0;
+  if(r.lHT){
+    r.gL=Math.round(dst(lH[H_THUMB_TIP],lH[H_PINKY_TIP])*1000);
+    r.wL=ang(lH[H_MID_MCP].x,lH[H_MID_MCP].y,lH[H_WRIST].x,lH[H_WRIST].y,p(L_EL).x,p(L_EL).y);
+    r.fL=Math.round(dst(lH[H_INDEX_TIP],lH[H_PINKY_TIP])*1000);
+  }
+  if(r.rHT){
+    r.gR=Math.round(dst(rH[H_THUMB_TIP],rH[H_PINKY_TIP])*1000);
+    r.wR=ang(rH[H_MID_MCP].x,rH[H_MID_MCP].y,rH[H_WRIST].x,rH[H_WRIST].y,p(R_EL).x,p(R_EL).y);
+    r.fR=Math.round(dst(rH[H_INDEX_TIP],rH[H_PINKY_TIP])*1000);
+  }
   return r;
 }
 
-/* ═══ DRAW ═══ */
-function drawPose(ctx,w,h,lm,prev){
+function drawAll(ctx,w,h,lm,prev,lH,rH){
   ctx.clearRect(0,0,w,h);
   if(!lm)return;
-
-  // grid
   ctx.globalAlpha=0.03;ctx.strokeStyle='#ff6d00';ctx.lineWidth=0.5;
   var i;
   for(i=0;i<w;i+=50){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,h);ctx.stroke();}
   for(i=0;i<h;i+=50){ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(w,i);ctx.stroke();}
   ctx.globalAlpha=1;
 
-  // bones
   BONES.forEach(function(b){
     var a=lm[b[0]],c=lm[b[1]];
     if(!a||!c||a.visibility<0.3||c.visibility<0.3)return;
@@ -114,7 +118,6 @@ function drawPose(ctx,w,h,lm,prev){
     ctx.strokeStyle=boneColor(b[0],b[1])+'40';ctx.lineWidth=8;ctx.stroke();
   });
 
-  // joints
   var keyJ=[L_SH,R_SH,L_EL,R_EL,L_WR,R_WR,L_HI,R_HI,L_KN,R_KN,L_AN,R_AN];
   lm.forEach(function(p,idx){
     if(p.visibility<0.3)return;
@@ -124,10 +127,37 @@ function drawPose(ctx,w,h,lm,prev){
     if(isK){ctx.beginPath();ctx.arc(p.x*w,p.y*h,10,0,Math.PI*2);ctx.strokeStyle='rgba(255,109,0,0.25)';ctx.lineWidth=1.5;ctx.stroke();}
   });
 
-  // angle arcs
+  function drawHand(hand){
+    if(!hand||hand.length<21)return;
+    HAND_BONES.forEach(function(b){
+      var a=hand[b[0]],c=hand[b[1]];
+      if(!a||!c)return;
+      ctx.beginPath();ctx.moveTo(a.x*w,a.y*h);ctx.lineTo(c.x*w,c.y*h);
+      ctx.strokeStyle='#00e5ff';ctx.lineWidth=2;ctx.lineCap='round';ctx.stroke();
+      ctx.strokeStyle='#00e5ff40';ctx.lineWidth=5;ctx.stroke();
+    });
+    hand.forEach(function(p,idx){
+      if(!p)return;
+      var isTip=[4,8,12,16,20].indexOf(idx)>=0;
+      ctx.beginPath();ctx.arc(p.x*w,p.y*h,isTip?4:2.5,0,Math.PI*2);
+      ctx.fillStyle=isTip?'#00e5ff':'rgba(0,229,255,0.6)';ctx.fill();
+    });
+    if(hand[H_THUMB_TIP]&&hand[H_PINKY_TIP]){
+      ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(hand[H_THUMB_TIP].x*w,hand[H_THUMB_TIP].y*h);
+      ctx.lineTo(hand[H_PINKY_TIP].x*w,hand[H_PINKY_TIP].y*h);
+      ctx.strokeStyle='rgba(0,229,255,0.5)';ctx.lineWidth=1;ctx.stroke();
+      ctx.setLineDash([]);
+      var gx=(hand[H_THUMB_TIP].x+hand[H_PINKY_TIP].x)/2*w;
+      var gy=(hand[H_THUMB_TIP].y+hand[H_PINKY_TIP].y)/2*h-10;
+      ctx.font='8px IBM Plex Mono';ctx.fillStyle='rgba(0,229,255,0.7)';ctx.fillText('GRIP',gx-10,gy);
+    }
+  }
+  drawHand(lH);drawHand(rH);
+
   function arc(ai,bi,ci,col){
     if(lm[ai].visibility<0.3||lm[bi].visibility<0.3||lm[ci].visibility<0.3)return;
-    var a=angle(lm[ai].x,lm[ai].y,lm[bi].x,lm[bi].y,lm[ci].x,lm[ci].y);
+    var a=ang(lm[ai].x,lm[ai].y,lm[bi].x,lm[bi].y,lm[ci].x,lm[ci].y);
     var bx=lm[bi].x*w,by=lm[bi].y*h;
     var s=Math.atan2(lm[ai].y-lm[bi].y,lm[ai].x-lm[bi].x);
     var en=Math.atan2(lm[ci].y-lm[bi].y,lm[ci].x-lm[bi].x);
@@ -139,7 +169,6 @@ function drawPose(ctx,w,h,lm,prev){
   arc(L_HI,L_KN,L_AN,'#1de9b6');arc(R_HI,R_KN,R_AN,'#1de9b6');
   arc(L_HI,L_SH,L_EL,'#ff6d00');arc(R_HI,R_SH,R_EL,'#ff6d00');
 
-  // hip-shoulder lines
   ctx.setLineDash([4,4]);
   ctx.beginPath();ctx.moveTo(lm[L_HI].x*w,lm[L_HI].y*h);ctx.lineTo(lm[R_HI].x*w,lm[R_HI].y*h);
   ctx.strokeStyle='rgba(255,171,64,0.6)';ctx.lineWidth=2;ctx.stroke();
@@ -147,36 +176,33 @@ function drawPose(ctx,w,h,lm,prev){
   ctx.strokeStyle='rgba(68,138,255,0.6)';ctx.lineWidth=2;ctx.stroke();
   ctx.setLineDash([]);
 
-  // COM
   var cx=(lm[L_HI].x+lm[R_HI].x)/2*w,cy=(lm[L_HI].y+lm[R_HI].y)/2*h;
   ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fillStyle='#ff6d00';ctx.fill();
   ctx.font='8px IBM Plex Mono';ctx.fillStyle='rgba(255,109,0,0.7)';ctx.fillText('COM',cx-10,cy-14);
 }
 
-/* ═══ COMPONENTS ═══ */
-function MetricBox(props){
+function MetricBox(p){
   return ce('div',{style:{background:'var(--s2)',borderRadius:8,padding:'8px 10px',border:'1px solid var(--bdr)',marginBottom:6}},
-    ce('div',{style:{fontSize:9,fontWeight:600,textTransform:'uppercase',letterSpacing:1,color:'var(--tx3)',marginBottom:2}},props.label),
+    ce('div',{style:{fontSize:9,fontWeight:600,textTransform:'uppercase',letterSpacing:1,color:'var(--tx3)',marginBottom:2}},p.label),
     ce('div',{style:{display:'flex',alignItems:'baseline',gap:3}},
-      ce('span',{style:{fontFamily:'var(--m)',fontSize:20,fontWeight:800,color:props.color||'var(--orange)'}},props.value),
-      props.unit?ce('span',{style:{fontFamily:'var(--m)',fontSize:10,color:'var(--tx3)'}},props.unit):null),
-    props.sub?ce('div',{style:{fontSize:8,color:'var(--tx3)',marginTop:2}},props.sub):null);
+      ce('span',{style:{fontFamily:'var(--m)',fontSize:20,fontWeight:800,color:p.color||'var(--orange)'}},p.value),
+      p.unit?ce('span',{style:{fontFamily:'var(--m)',fontSize:10,color:'var(--tx3)'}},p.unit):null),
+    p.sub?ce('div',{style:{fontSize:8,color:'var(--tx3)',marginTop:2}},p.sub):null);
 }
 
-function AngleRow(props){
+function AngleRow(p){
   return ce('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'4px 0',borderBottom:'1px solid var(--bdr)'}},
-    ce('span',{style:{fontSize:10,color:'var(--tx2)',flex:1}},props.label),
-    ce('span',{style:{fontFamily:'var(--m)',fontSize:11,fontWeight:600,color:props.color||'var(--tx)',width:42,textAlign:'right'}},props.left+'\u00B0'),
-    ce('span',{style:{fontFamily:'var(--m)',fontSize:11,fontWeight:600,color:props.color||'var(--tx)',width:42,textAlign:'right'}},props.right+'\u00B0'));
+    ce('span',{style:{fontSize:10,color:'var(--tx2)',flex:1}},p.label),
+    ce('span',{style:{fontFamily:'var(--m)',fontSize:11,fontWeight:600,color:p.color||'var(--tx)',width:42,textAlign:'right'}},p.left+'\u00B0'),
+    ce('span',{style:{fontFamily:'var(--m)',fontSize:11,fontWeight:600,color:p.color||'var(--tx)',width:42,textAlign:'right'}},p.right+'\u00B0'));
 }
 
-function ProgBar(props){
-  var pct=Math.min(100,Math.max(0,props.pct));
+function ProgBar(p){
+  var pct=Math.min(100,Math.max(0,p.pct));
   return ce('div',{style:{height:6,borderRadius:3,background:'var(--s3)',overflow:'hidden',marginBottom:8}},
-    ce('div',{style:{height:'100%',borderRadius:3,background:props.color||'var(--green)',width:pct+'%',transition:'width .2s'}}));
+    ce('div',{style:{height:'100%',borderRadius:3,background:p.color||'var(--green)',width:pct+'%',transition:'width .2s'}}));
 }
 
-/* ═══ APP ═══ */
 function App(){
   var _m=us(null),metrics=_m[0],setMetrics=_m[1];
   var _c=us(false),camOn=_c[0],setCamOn=_c[1];
@@ -195,40 +221,42 @@ function App(){
       strRef.current=stream;
       vidRef.current.srcObject=stream;
       vidRef.current.play();
-      loadPose();
+      loadH();
     });
   }
 
-  function loadPose(){
+  function loadH(){
     var s1=document.createElement('script');
-    s1.src='https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/pose.js';
+    s1.src='https://cdn.jsdelivr.net/npm/@mediapipe/holistic@0.5/holistic.js';
     s1.onload=function(){
       var s2=document.createElement('script');
       s2.src='https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js';
-      s2.onload=initPose;
+      s2.onload=initH;
       document.head.appendChild(s2);
     };
     document.head.appendChild(s1);
   }
 
-  function initPose(){
-    var pose=new window.Pose({locateFile:function(f){return'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/'+f;}});
-    pose.setOptions({modelComplexity:1,smoothLandmarks:true,minDetectionConfidence:0.5,minTrackingConfidence:0.5});
-    pose.onResults(onResults);
-    var cam=new window.Camera(vidRef.current,{onFrame:function(){return pose.send({image:vidRef.current});},width:1280,height:720});
+  function initH(){
+    var h=new window.Holistic({locateFile:function(f){return 'https://cdn.jsdelivr.net/npm/@mediapipe/holistic@0.5/'+f;}});
+    h.setOptions({modelComplexity:1,smoothLandmarks:true,minDetectionConfidence:0.5,minTrackingConfidence:0.5});
+    h.onResults(onR);
+    var cam=new window.Camera(vidRef.current,{onFrame:function(){return h.send({image:vidRef.current});},width:1280,height:720});
     cam.start();
   }
 
-  function onResults(results){
+  function onR(results){
     var lm=results.poseLandmarks;
+    var lH=results.leftHandLandmarks||null;
+    var rH=results.rightHandLandmarks||null;
     var c=canRef.current;
     if(c){
       c.width=c.offsetWidth;c.height=c.offsetHeight;
-      drawPose(c.getContext('2d'),c.width,c.height,lm,prevRef.current);
+      drawAll(c.getContext('2d'),c.width,c.height,lm,prevRef.current,lH,rH);
     }
     if(lm&&lm.length>=33){
       fc.current++;
-      var r=analyze(lm,prevRef.current);
+      var r=analyze(lm,prevRef.current,lH,rH);
       if(r.mph>peakSpd.current)peakSpd.current=r.mph;
       if(r.sep>peakSep.current)peakSep.current=r.sep;
       if(r.stride>peakStr.current)peakStr.current=r.stride;
@@ -241,15 +269,14 @@ function App(){
     }
   }
 
-  var m=metrics||{elbL:0,elbR:0,shL:0,shR:0,knL:0,knR:0,hiL:0,hiR:0,sep:0,stride:0,mph:0,maxV:0,velL:0,velR:0,armSlot:0,bal:50,kneeBend:0,pkSpd:0,pkSep:0,pkStr:0,fc:0};
+  var m=metrics||{elbL:0,elbR:0,shL:0,shR:0,knL:0,knR:0,hiL:0,hiR:0,sep:0,stride:0,mph:0,maxV:0,velL:0,velR:0,armSlot:0,bal:50,kneeBend:0,pkSpd:0,pkSep:0,pkStr:0,fc:0,lHT:false,rHT:false,gL:0,gR:0,wL:0,wR:0,fL:0,fR:0,hc:0,tLM:33};
 
-  // Top bar
   var topBar=ce('div',{style:{height:54,background:'var(--s1)',borderBottom:'1px solid var(--bdr)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 18px',flexShrink:0}},
     ce('div',{style:{display:'flex',alignItems:'center',gap:12}},
       ce('div',{style:{width:34,height:34,borderRadius:9,background:'linear-gradient(135deg,#ff6d00,#ff9100)',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,fontSize:13,color:'#000'}},'C'),
       ce('span',{style:{fontWeight:800,fontSize:15}},'Command',ce('span',{style:{color:'var(--orange)'}},'OS')),
       ce('span',{style:{fontFamily:'var(--m)',fontSize:10,background:'var(--orangeG)',color:'var(--orange)',padding:'3px 8px',borderRadius:6,border:'1px solid rgba(255,109,0,.15)',fontWeight:600}},'BIOMECHANICS'),
-      ce('span',{style:{fontFamily:'var(--m)',fontSize:10,background:'var(--s2)',color:'var(--tx3)',padding:'3px 8px',borderRadius:6,border:'1px solid var(--bdr)'}},'BWILD Technologies')),
+      ce('span',{style:{fontFamily:'var(--m)',fontSize:10,background:'var(--s2)',color:'var(--tx3)',padding:'3px 8px',borderRadius:6,border:'1px solid var(--bdr)'}},'NeuroCheck Technologies')),
     ce('div',{style:{display:'flex',alignItems:'center',gap:14}},
       metrics?ce('div',{style:{display:'flex',alignItems:'center',gap:6}},
         ce('div',{style:{width:7,height:7,borderRadius:'50%',background:'var(--green)',boxShadow:'0 0 8px var(--green)',animation:'pulse 2s infinite'}}),
@@ -257,52 +284,59 @@ function App(){
       ce('span',{style:{fontFamily:'var(--m)',fontSize:10,color:'var(--tx3)'}},m.fc+' frames'),
       ce('span',{style:{fontFamily:'var(--m)',fontSize:13,color:'var(--tx2)'}},time)));
 
-  // Start screen
   var startScreen=ce('div',{style:{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(6,10,17,0.95)',zIndex:20}},
     ce('div',{style:{textAlign:'center',maxWidth:480}},
       ce('div',{style:{fontSize:52,marginBottom:16}},'\u26BE'),
       ce('div',{style:{fontSize:24,fontWeight:800,color:'var(--orange)',marginBottom:4}},'CommandOS Biomechanics'),
       ce('div',{style:{fontSize:14,color:'var(--tx2)',marginBottom:6}},'Athletic Movement Analysis Module'),
-      ce('div',{style:{fontSize:12,color:'var(--tx3)',marginBottom:28,lineHeight:1.7}},'Stand 6-10 feet from your camera. Perform a swing, throw, or any movement. The system tracks 33 body landmarks and computes joint angles, velocity, hip-shoulder separation, and balance in real-time. No sensors \u2014 video only.'),
+      ce('div',{style:{fontSize:12,color:'var(--tx3)',marginBottom:28,lineHeight:1.7}},'Stand 6-10 feet from your camera. Perform a swing, throw, or any movement. The system tracks 75 body and hand landmarks and computes joint angles, grip mechanics, wrist snap, velocity, hip-shoulder separation, and balance in real-time. No sensors - video only.'),
       ce('button',{onClick:startCam,style:{padding:'16px 48px',borderRadius:12,border:'2px solid var(--orange)',background:'var(--orangeG)',color:'var(--orange)',fontSize:17,fontWeight:700,cursor:'pointer',fontFamily:'var(--f)'}},'Start Camera'),
       ce('div',{style:{marginTop:20,display:'flex',gap:12,justifyContent:'center'}},
-        ['\u26BE Batting','\u26BE Pitching','\uD83C\uDFC3 Running','\uD83C\uDFCB\uFE0F Lifting'].map(function(s){
+        ['Batting','Pitching','Running','Lifting'].map(function(s){
           return ce('span',{key:s,style:{fontSize:10,padding:'4px 10px',borderRadius:6,background:'var(--s2)',border:'1px solid var(--bdr)',color:'var(--tx2)',fontFamily:'var(--m)'}},s);
         }))));
 
-  // Left panel
   var leftPanel=ce('div',{style:{width:240,background:'var(--s1)',borderRight:'1px solid var(--bdr)',padding:12,overflowY:'auto',flexShrink:0}},
     ce('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1.5,color:'var(--tx3)',marginBottom:10}},'Peak Metrics'),
-    ce(MetricBox,{label:'Est. Hand Speed',value:m.pkSpd,unit:'mph',color:'var(--orange)',sub:'Peak hand velocity from video'}),
+    ce(MetricBox,{label:'Est. Hand Speed',value:m.pkSpd,unit:'mph',color:'var(--orange)',sub:'Peak hand velocity'}),
     ce(MetricBox,{label:'Hip-Shoulder Sep.',value:m.pkSep,unit:'\u00B0',color:'var(--blue)',sub:'Max rotational separation'}),
     ce(MetricBox,{label:'Stride Length',value:m.pkStr,unit:'% hip',color:'var(--teal)',sub:'Max stride / hip width'}),
     ce('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1.5,color:'var(--tx3)',marginTop:14,marginBottom:10}},'Live Metrics'),
     ce(MetricBox,{label:'Balance Score',value:m.bal,unit:'%',color:m.bal>70?'var(--green)':m.bal>40?'var(--amber)':'var(--red)'}),
     ce(MetricBox,{label:'Knee Bend (Avg)',value:m.kneeBend,unit:'\u00B0',color:'var(--teal)'}),
     ce(MetricBox,{label:'Arm Slot',value:m.armSlot,unit:'\u00B0',color:'var(--purple)',sub:'Release angle estimate'}),
+    ce('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1.5,color:'var(--tx3)',marginTop:14,marginBottom:10}},'Hand Tracking'),
+    ce(MetricBox,{label:'Grip Spread (L)',value:m.gL,unit:'u',color:m.lHT?'var(--cyan)':'var(--tx3)',sub:m.lHT?'Thumb-to-pinky':'Searching...'}),
+    ce(MetricBox,{label:'Grip Spread (R)',value:m.gR,unit:'u',color:m.rHT?'var(--cyan)':'var(--tx3)',sub:m.rHT?'Thumb-to-pinky':'Searching...'}),
+    ce(MetricBox,{label:'Wrist Angle (L)',value:m.wL,unit:'\u00B0',color:m.lHT?'var(--cyan)':'var(--tx3)'}),
+    ce(MetricBox,{label:'Wrist Angle (R)',value:m.wR,unit:'\u00B0',color:m.rHT?'var(--cyan)':'var(--tx3)'}),
     ce('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1.5,color:'var(--tx3)',marginTop:14,marginBottom:8}},'Pipeline'),
     ce('div',{style:{background:'var(--s2)',borderRadius:8,padding:10,border:'1px solid var(--bdr)',fontSize:9,color:'var(--tx2)',lineHeight:1.8,fontFamily:'var(--m)'}},
-      '\u2022 MediaPipe Pose (33 landmarks)',ce('br',null),
-      '\u2022 Trigonometric angle calc',ce('br',null),
-      '\u2022 Frame-delta velocity est.',ce('br',null),
-      '\u2022 Reference-calibrated distance',ce('br',null),
-      '\u2022 CommandOS \u2192 UPI tracking',ce('br',null),
+      '* MediaPipe Holistic (75 pts)',ce('br',null),
+      '* 33 body + 21 per hand',ce('br',null),
+      '* Grip mechanics analysis',ce('br',null),
+      '* Wrist snap tracking',ce('br',null),
+      '* Frame-delta velocity',ce('br',null),
+      '* CommandOS > UPI tracking',ce('br',null),
       ce('div',{style:{marginTop:6,paddingTop:6,borderTop:'1px solid var(--bdr)',color:'var(--tx3)'}},'No sensors. Video only.')));
 
-  // Video area
+  var hs=[];
+  if(m.lHT)hs.push('L OK');
+  if(m.rHT)hs.push('R OK');
   var videoArea=ce('div',{style:{flex:1,position:'relative',overflow:'hidden',background:'#050810'}},
     ce('video',{ref:vidRef,autoPlay:true,playsInline:true,muted:true,style:{display:'block',width:'100%',height:'100%',objectFit:'cover',transform:'scaleX(-1)'}}),
     ce('canvas',{ref:canRef,className:'ov'}),
     !camOn?startScreen:null,
     ce('div',{style:{position:'absolute',top:14,left:14,display:'flex',alignItems:'center',gap:8,background:'rgba(0,0,0,.7)',backdropFilter:'blur(10px)',padding:'6px 14px',borderRadius:8,fontSize:11,fontFamily:'var(--m)',zIndex:10}},
-      ce('div',{style:{width:7,height:7,borderRadius:'50%',background:'var(--red)',animation:'pulse 1s infinite'}}),'LIVE \u2014 POSE TRACKING'),
-    ce('div',{style:{position:'absolute',top:14,right:14,background:'rgba(0,0,0,.7)',backdropFilter:'blur(10px)',padding:'6px 14px',borderRadius:8,fontSize:11,fontFamily:'var(--m)',color:'var(--orange)',zIndex:10}},'33 landmarks'),
+      ce('div',{style:{width:7,height:7,borderRadius:'50%',background:'var(--red)',animation:'pulse 1s infinite'}}),'LIVE - POSE + HAND TRACKING'),
+    ce('div',{style:{position:'absolute',top:14,right:14,background:'rgba(0,0,0,.7)',backdropFilter:'blur(10px)',padding:'6px 14px',borderRadius:8,fontSize:11,fontFamily:'var(--m)',color:'var(--orange)',zIndex:10}},
+      m.tLM+' landmarks | Hands: '+(hs.length>0?hs.join(' '):'scanning...')),
     ce('div',{style:{position:'absolute',bottom:14,left:14,background:'rgba(0,0,0,.7)',backdropFilter:'blur(10px)',padding:'7px 16px',borderRadius:8,fontSize:10,color:'var(--tx2)',zIndex:10,fontFamily:'var(--m)'}},
       'Speed: ',ce('span',{style:{color:'var(--orange)',fontWeight:700}},m.maxV+' u/f'),
-      ' \u2022 Sep: ',ce('span',{style:{color:'var(--blue)',fontWeight:700}},m.sep+'\u00B0'),
-      ' \u2022 Stride: ',ce('span',{style:{color:'var(--teal)',fontWeight:700}},m.stride+'%')));
+      ' | Sep: ',ce('span',{style:{color:'var(--blue)',fontWeight:700}},m.sep+'\u00B0'),
+      ' | Stride: ',ce('span',{style:{color:'var(--teal)',fontWeight:700}},m.stride+'%'),
+      ' | Grip: ',ce('span',{style:{color:'var(--cyan)',fontWeight:700}},Math.max(m.gL,m.gR)+'u')));
 
-  // Right panel
   var rightPanel=ce('div',{style:{width:260,background:'var(--s1)',borderLeft:'1px solid var(--bdr)',padding:12,overflowY:'auto',flexShrink:0}},
     ce('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1.5,color:'var(--tx3)',marginBottom:10}},'Joint Angles'),
     ce('div',{style:{background:'var(--s2)',borderRadius:10,padding:10,border:'1px solid var(--bdr)',marginBottom:10}},
@@ -313,18 +347,38 @@ function App(){
       ce(AngleRow,{label:'Shoulder',left:m.shL,right:m.shR,color:'var(--orange)'}),
       ce(AngleRow,{label:'Elbow',left:m.elbL,right:m.elbR,color:'var(--blue)'}),
       ce(AngleRow,{label:'Hip',left:m.hiL,right:m.hiR,color:'var(--amber)'}),
-      ce(AngleRow,{label:'Knee',left:m.knL,right:m.knR,color:'var(--teal)'})),
-
+      ce(AngleRow,{label:'Knee',left:m.knL,right:m.knR,color:'var(--teal)'}),
+      ce(AngleRow,{label:'Wrist',left:m.wL,right:m.wR,color:'var(--cyan)'})),
+    ce('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1.5,color:'var(--tx3)',marginBottom:10}},'Hand / Grip'),
+    ce('div',{style:{background:'var(--s2)',borderRadius:10,padding:10,border:'1px solid var(--bdr)',marginBottom:10}},
+      ce('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:4}},
+        ce('span',{style:{color:'var(--tx2)'}},'L Hand'),
+        ce('span',{style:{fontFamily:'var(--m)',fontWeight:700,color:m.lHT?'var(--green)':'var(--tx3)'}},m.lHT?'21 pts':'scanning')),
+      ce('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:4}},
+        ce('span',{style:{color:'var(--tx2)'}},'R Hand'),
+        ce('span',{style:{fontFamily:'var(--m)',fontWeight:700,color:m.rHT?'var(--green)':'var(--tx3)'}},m.rHT?'21 pts':'scanning')),
+      ce('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:4,paddingTop:4,borderTop:'1px solid var(--bdr)'}},
+        ce('span',{style:{color:'var(--tx2)'}},'Grip Spread L'),
+        ce('span',{style:{fontFamily:'var(--m)',fontWeight:700,color:'var(--cyan)'}},m.gL+' u')),
+      ce('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:4}},
+        ce('span',{style:{color:'var(--tx2)'}},'Grip Spread R'),
+        ce('span',{style:{fontFamily:'var(--m)',fontWeight:700,color:'var(--cyan)'}},m.gR+' u')),
+      ce('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:4}},
+        ce('span',{style:{color:'var(--tx2)'}},'Finger Spread L'),
+        ce('span',{style:{fontFamily:'var(--m)',fontWeight:700,color:'var(--cyan)'}},m.fL+' u')),
+      ce('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11}},
+        ce('span',{style:{color:'var(--tx2)'}},'Finger Spread R'),
+        ce('span',{style:{fontFamily:'var(--m)',fontWeight:700,color:'var(--cyan)'}},m.fR+' u')),
+      ce('div',{style:{fontSize:8,color:'var(--tx3)',marginTop:6,paddingTop:4,borderTop:'1px solid var(--bdr)'}},'Grip = thumb-pinky. Finger = index-pinky. Tight grip = lower values.')),
     ce('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1.5,color:'var(--tx3)',marginBottom:10}},'Rotational'),
     ce('div',{style:{background:'var(--s2)',borderRadius:10,padding:10,border:'1px solid var(--bdr)',marginBottom:10}},
       ce('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:4}},
         ce('span',{style:{color:'var(--tx2)'}},'Hip-Shoulder Sep.'),
         ce('span',{style:{fontFamily:'var(--m)',fontWeight:700,color:m.sep>15?'var(--green)':'var(--tx)'}},m.sep+'\u00B0')),
       ce(ProgBar,{pct:m.sep/45*100,color:m.sep>15?'var(--green)':'var(--amber)'}),
-      ce('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:4}},
+      ce('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11}},
         ce('span',{style:{color:'var(--tx2)'}},'Arm Slot'),
         ce('span',{style:{fontFamily:'var(--m)',fontWeight:700,color:'var(--purple)'}},m.armSlot+'\u00B0'))),
-
     ce('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1.5,color:'var(--tx3)',marginBottom:10}},'Lower Body'),
     ce('div',{style:{background:'var(--s2)',borderRadius:10,padding:10,border:'1px solid var(--bdr)',marginBottom:10}},
       ce('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:4}},
@@ -335,7 +389,6 @@ function App(){
         ce('span',{style:{color:'var(--tx2)'}},'Balance'),
         ce('span',{style:{fontFamily:'var(--m)',fontWeight:700,color:m.bal>70?'var(--green)':'var(--amber)'}},m.bal+'%')),
       ce(ProgBar,{pct:m.bal,color:m.bal>70?'var(--green)':'var(--amber)'})),
-
     ce('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1.5,color:'var(--tx3)',marginBottom:10}},'Velocity'),
     ce('div',{style:{background:'var(--s2)',borderRadius:10,padding:10,border:'1px solid var(--bdr)'}},
       ce('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:4}},
