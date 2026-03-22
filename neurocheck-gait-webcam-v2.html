@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>NeuroCheck AI — Live Gait Webcam</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+--bg:#060a11;--s1:#0c1220;--s2:#131c2e;--s3:#1a2640;
+--bdr:#1e2d45;--tx:#e8ecf4;--tx2:#8e9bb8;--tx3:#5a6a85;
+--teal:#1de9b6;--tealG:rgba(29,233,182,.08);
+--red:#ff5252;--redG:rgba(255,82,82,.1);
+--amber:#ffab40;--amberG:rgba(255,171,64,.1);
+--blue:#448aff;--blueG:rgba(68,138,255,.1);
+--green:#69f0ae;--greenG:rgba(105,240,174,.1);
+--purple:#b388ff;
+--f:'DM Sans',system-ui,sans-serif;--m:'IBM Plex Mono',monospace;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--f);background:var(--bg);color:var(--tx);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes alertPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,82,82,.3)}50%{box-shadow:0 0 30px 10px rgba(255,82,82,.12)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
+
+<video id="vid" style="display:none" autoplay playsinline muted></video>
+<canvas id="c" style="position:fixed;top:0;left:0;width:100%;height:100%"></canvas>
+
+<!-- TOPBAR -->
+<div style="position:fixed;top:0;left:0;right:0;height:52px;background:rgba(12,18,32,0.97);border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;padding:0 16px;z-index:50;backdrop-filter:blur(10px)">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#00bfa5,#1de9b6);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#000">N</div>
+    <span style="font-weight:800;font-size:14px">NeuroCheck<span style="color:var(--teal)">AI</span></span>
+    <span style="font-family:var(--m);font-size:9px;background:var(--greenG);color:var(--green);padding:2px 8px;border-radius:5px;border:1px solid rgba(105,240,174,.2);font-weight:600">LIVE WEBCAM GAIT</span>
+  </div>
+  <div style="display:flex;gap:6px">
+    <a href="neurocheck-gait-demo.html" style="padding:5px 12px;border-radius:6px;border:1px solid var(--bdr);color:var(--tx2);font-size:11px;font-weight:600;font-family:var(--f);text-decoration:none">AI Demo (3-Camera)</a>
+    <a href="neurocheck-demo.html" style="padding:5px 12px;border-radius:6px;border:1px solid var(--bdr);color:var(--tx2);font-size:11px;font-weight:600;font-family:var(--f);text-decoration:none">CN Webcam Demo</a>
+    <a href="demos.html" style="padding:5px 12px;border-radius:6px;border:1px solid var(--bdr);color:var(--tx2);font-size:11px;font-weight:600;font-family:var(--f);text-decoration:none">All Demos</a>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span style="font-family:var(--m);font-size:9px;color:var(--tx3)">Patent: AI Assessment + Continuous Monitoring</span>
+    <div id="statusDot" style="display:flex;align-items:center;gap:4px">
+      <div style="width:6px;height:6px;border-radius:50%;background:var(--tx3)"></div>
+      <span id="statusTxt" style="font-size:11px;color:var(--tx3);font-weight:600">Ready</span>
+    </div>
+    <span id="clk" style="font-family:var(--m);font-size:12px;color:var(--tx2)"></span>
+  </div>
+</div>
+
+<!-- LAYOUT -->
+<div style="position:fixed;top:52px;left:0;right:0;bottom:0;display:flex;overflow:hidden">
+
+  <!-- LEFT SIDEBAR -->
+  <div style="width:230px;flex-shrink:0;background:rgba(6,10,17,0.95);border-right:1px solid var(--bdr);padding:12px;overflow-y:auto;z-index:10">
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--tx3);margin-bottom:8px">Setup</div>
+    <div style="background:var(--s2);border-radius:10px;padding:12px;border:1px solid var(--bdr);margin-bottom:10px;font-size:11px;color:var(--tx2);line-height:1.8">
+      <div style="font-family:var(--m);font-size:9px;font-weight:700;color:var(--teal);margin-bottom:6px">FRONT-FACING CAMERA</div>
+      <b style="color:var(--tx)">Step 1:</b> Set laptop/tablet on a surface so full body is visible (~6-8 ft back)<br><br>
+      <b style="color:var(--tx)">Step 2:</b> Click <b style="color:var(--teal)">Start Camera</b><br><br>
+      <b style="color:var(--tx)">Step 3 — Walk:</b> Start ~8 feet away, walk directly toward camera until ~3 feet away<br><br>
+      <b style="color:var(--tx)">Step 4 — Sway:</b> Stand still at ~4 feet. Shift weight side to side. Rise on toes.<br><br>
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--bdr);font-size:10px;color:var(--amber)">
+        💡 Try exaggerating a limp or unequal arm swing — watch fall risk score respond instantly
+      </div>
+    </div>
+
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--tx3);margin-bottom:8px">Assessment Mode</div>
+    <div id="modePanel" style="background:var(--s2);border-radius:10px;padding:10px;border:1px solid var(--bdr);margin-bottom:10px">
+      <div id="modeWalk" style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:6px;background:var(--tealG);border:1px solid rgba(29,233,182,.2);margin-bottom:4px">
+        <div id="modeWalkDot" style="width:6px;height:6px;border-radius:50%;background:var(--tx3)"></div>
+        <span style="font-size:10px;font-weight:600;color:var(--teal);font-family:var(--m)">PHASE 1: Walk Toward</span>
+      </div>
+      <div id="modeSway" style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:6px;background:transparent;border:1px solid var(--bdr)">
+        <div id="modeSwayDot" style="width:6px;height:6px;border-radius:50%;background:var(--tx3)"></div>
+        <span style="font-size:10px;font-weight:600;color:var(--tx3);font-family:var(--m)">PHASE 2: Sway Stand</span>
+      </div>
+    </div>
+
+    <button id="startBtn" onclick="startCamera()" style="width:100%;padding:11px;border-radius:8px;border:1px solid var(--teal);background:var(--tealG);color:var(--teal);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--f);margin-bottom:6px">▶ Start Camera</button>
+    <button onclick="resetMetrics()" style="width:100%;padding:9px;border-radius:8px;border:1px solid var(--bdr);background:transparent;color:var(--tx2);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--f);margin-bottom:10px">↺ Reset Metrics</button>
+
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--tx3);margin-bottom:6px">What's Detected</div>
+    <div style="background:var(--s2);border-radius:10px;padding:10px;border:1px solid var(--bdr);font-size:9px;color:var(--tx2);line-height:1.8">
+      &bull; Trunk lateral sway (front view)<br>
+      &bull; Arm swing L vs R asymmetry<br>
+      &bull; Knee flexion bilateral<br>
+      &bull; Hip symmetry<br>
+      &bull; Shoulder level difference<br>
+      &bull; Body approach vector<br>
+      &bull; Postural sway amplitude<br>
+      &bull; Fall risk composite score
+      <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--bdr);font-size:8px;color:var(--tx3)">
+        MediaPipe Holistic &bull; 33-pt pose<br>Same engine as SwingCheck AI
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER: video + skeleton overlay -->
+  <div style="flex:1;position:relative;overflow:hidden;background:#040810">
+
+    <!-- Prompt overlay -->
+    <div id="promptBox" style="position:absolute;top:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.88);backdrop-filter:blur(16px);padding:14px 28px;border-radius:12px;text-align:center;border:1px solid var(--teal);z-index:20;pointer-events:none;animation:slideUp .3s ease;display:none">
+      <div id="promptMain" style="font-size:18px;font-weight:800;color:var(--teal)"></div>
+      <div id="promptSub" style="font-size:11px;color:var(--tx2);margin-top:4px"></div>
+    </div>
+
+    <!-- Alert banner -->
+    <div id="alertBanner" style="display:none;position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(255,82,82,.12);border:1px solid rgba(255,82,82,.4);backdrop-filter:blur(10px);padding:10px 20px;border-radius:10px;display:none;align-items:center;gap:10px;animation:alertPulse 2s infinite;z-index:20;pointer-events:none">
+      <span style="font-size:14px">🚨</span>
+      <div>
+        <div id="alertTitle" style="font-size:11px;font-weight:700;color:var(--red)"></div>
+        <div id="alertSub" style="font-size:10px;color:var(--tx2)"></div>
+      </div>
+    </div>
+
+    <!-- No camera state -->
+    <div id="noCamMsg" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:5">
+      <div style="font-size:32px;margin-bottom:12px">📷</div>
+      <div style="font-size:18px;font-weight:700;color:var(--teal);margin-bottom:8px">Front-Facing Gait Analysis</div>
+      <div style="font-size:13px;color:var(--tx2);max-width:340px;line-height:1.6">Place your device so your full body is visible from ~6-8 feet away, then click <b style="color:var(--teal)">Start Camera</b></div>
+    </div>
+
+    <!-- Status bar bottom -->
+    <div style="position:absolute;bottom:8px;left:12px;font-family:var(--m);font-size:10px;z-index:10">
+      <span id="statusBar" style="background:rgba(0,0,0,0.7);padding:3px 10px;border-radius:5px;color:var(--tx3)">● Camera not started</span>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL: plain language top, clinical bottom -->
+  <div style="width:260px;flex-shrink:0;display:flex;flex-direction:column;border-left:1px solid var(--bdr);overflow:hidden">
+    <div id="rp-plain" style="flex:1;background:rgba(6,14,10,0.97);padding:12px;overflow-y:auto;border-bottom:1px solid var(--bdr)"></div>
+    <div id="rp" style="flex:1;background:rgba(6,10,17,0.95);padding:12px;overflow-y:auto"></div>
+  </div>
+</div>
+
+<script>
+setInterval(function(){var e=document.getElementById('clk');if(e)e.textContent=new Date().toTimeString().split(' ')[0];},1000);
+
+var canvas=document.getElementById('c'),ctx=canvas.getContext('2d'),vid=document.getElementById('vid');
+var W,H;
+function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
+resize();window.addEventListener('resize',resize);
+
+var cameraStarted=false,holistic=null;
+var assessMode='walk'; // walk | sway
+var frameCount=0,fps=0,fpsCount=0,fpsTimer=0;
+
+// Metrics
+var M={
+  poseLandmarks:null,
+  trunkLat:0,trunkAP:0,
+  armL:0,armR:0,
+  kneeL:0,kneeR:0,
+  hipL:0,hipR:0,
+  shoulderDiff:0,
+  swayAmp:0,
+  swayHistory:[],
+  fallRisk:'',score:0,
+  frameCount:0,fps:0
+};
+
+function resetMetrics(){
+  M.trunkLat=0;M.trunkAP=0;M.armL=0;M.armR=0;
+  M.kneeL=0;M.kneeR=0;M.swayAmp=0;M.swayHistory=[];
+  M.fallRisk='';M.score=0;M.poseLandmarks=null;
+  renderRight();renderPlain();hideAlert();
+}
+
+function lerp(a,b,t){return a+(b-a)*t;}
+function angle3pts(a,b,c){
+  var ab=[b.x-a.x,b.y-a.y],bc=[c.x-b.x,c.y-b.y];
+  var dot=ab[0]*bc[0]+ab[1]*bc[1];
+  var m=Math.sqrt(ab[0]*ab[0]+ab[1]*ab[1])*Math.sqrt(bc[0]*bc[0]+bc[1]*bc[1]);
+  return m?Math.acos(Math.max(-1,Math.min(1,dot/m)))*(180/Math.PI):0;
+}
+
+// ═══ MEDIAPIPE RESULTS ═══
+function onResults(results){
+  M.frameCount++;frameCount++;
+  var now=Date.now();
+  fpsCount++;if(now-fpsTimer>1000){M.fps=fpsCount;fpsCount=0;fpsTimer=now;}
+
+  var lm=results.poseLandmarks;
+  if(!lm||lm.length<33){M.poseLandmarks=null;renderRight();renderPlain();return;}
+  M.poseLandmarks=lm;
+  document.getElementById('noCamMsg').style.display='none';
+
+  var nose=lm[0],lSh=lm[11],rSh=lm[12],lEl=lm[13],rEl=lm[14],
+      lWr=lm[15],rWr=lm[16],lHip=lm[23],rHip=lm[24],
+      lKn=lm[25],rKn=lm[26],lAn=lm[27],rAn=lm[28];
+
+  // Trunk lateral sway from front view
+  var hipMid={x:(lHip.x+rHip.x)/2,y:(lHip.y+rHip.y)/2};
+  var shMid={x:(lSh.x+rSh.x)/2,y:(lSh.y+rSh.y)/2};
+  var swayLat=Math.abs(Math.atan2(shMid.x-hipMid.x,Math.abs(shMid.y-hipMid.y))*(180/Math.PI));
+  M.trunkLat=lerp(M.trunkLat,swayLat,0.1);
+
+  // Arm swing: angle of elbow relative to shoulder-hip line
+  var armL=angle3pts(lEl,lSh,lHip);
+  var armR=angle3pts(rEl,rSh,rHip);
+  M.armL=lerp(M.armL,armL,0.08);
+  M.armR=lerp(M.armR,armR,0.08);
+
+  // Knee flexion
+  M.kneeL=lerp(M.kneeL,angle3pts(lHip,lKn,lAn),0.08);
+  M.kneeR=lerp(M.kneeR,angle3pts(rHip,rKn,rAn),0.08);
+
+  // Shoulder level difference
+  M.shoulderDiff=Math.abs(lSh.y-rSh.y)*100;
+
+  // Sway amplitude (track hip midpoint x over time)
+  if(assessMode==='sway'){
+    M.swayHistory.push(hipMid.x);
+    if(M.swayHistory.length>60)M.swayHistory.shift();
+    if(M.swayHistory.length>10){
+      var mn=Math.min.apply(null,M.swayHistory),mx=Math.max.apply(null,M.swayHistory);
+      M.swayAmp=lerp(M.swayAmp,(mx-mn)*100,0.05);
+    }
+  }
+
+  // Fall risk
+  var risk=0;
+  if(M.trunkLat>8)risk+=2;if(M.trunkLat>12)risk+=2;
+  var armSym=Math.min(M.armL,M.armR)/(Math.max(M.armL,M.armR)+0.001);
+  if(armSym<0.7)risk+=3;else if(armSym<0.85)risk+=1;
+  if(M.shoulderDiff>3)risk+=1;
+  if(M.swayAmp>8)risk+=2;
+  if(Math.abs(M.kneeL-M.kneeR)>15)risk+=1;
+  M.score=Math.min(100,risk*10);
+  var prevRisk=M.fallRisk;
+  M.fallRisk=risk>=5?'HIGH':risk>=3?'MED':'LOW';
+  if(M.fallRisk==='HIGH'&&prevRisk!=='HIGH')triggerAlert();
+  else if(M.fallRisk!=='HIGH')hideAlert();
+
+  renderRight();renderPlain();
+  updateStatusBar();
+}
+
+function triggerAlert(){
+  var b=document.getElementById('alertBanner');
+  b.style.display='flex';
+  document.getElementById('alertTitle').textContent='HIGH FALL RISK DETECTED — Gait Asymmetry';
+  document.getElementById('alertSub').textContent='Arm swing asymmetry + trunk sway > threshold — Notify attending';
+}
+function hideAlert(){document.getElementById('alertBanner').style.display='none';}
+
+function updateStatusBar(){
+  var sb=document.getElementById('statusBar');
+  if(M.poseLandmarks){
+    sb.style.color='var(--teal)';
+    sb.textContent='● LIVE — '+M.fps+' FPS — '+M.frameCount+' frames — MediaPipe Holistic 33-pt — Mode: '+(assessMode==='walk'?'WALK APPROACH':'SWAY ASSESSMENT');
+  }
+}
+
+// ═══ DRAW ═══
+function draw(){
+  requestAnimationFrame(draw);
+  if(!W||!H)return;
+  ctx.fillStyle='#040810';ctx.fillRect(0,0,W,H);
+
+  if(cameraStarted&&vid.readyState>=2){
+    var vw=vid.videoWidth||640,vh=vid.videoHeight||480;
+    var scale=Math.min(W/vw,(H-52)/vh);
+    var dw=vw*scale,dh=vh*scale;
+    var dx=(W-dw)/2,dy=52+(H-52-dh)/2;
+    ctx.save();ctx.translate(W,0);ctx.scale(-1,1);
+    ctx.globalAlpha=0.6;ctx.drawImage(vid,W-dx-dw,dy,dw,dh);
+    ctx.globalAlpha=1;ctx.restore();
+
+    if(M.poseLandmarks){
+      var lm=M.poseLandmarks;
+      function pt(l){return{x:W-(dx+l.x*dw),y:dy+l.y*dh};}
+      var pts=lm.map(pt);
+
+      // Skeleton connections
+      var conns=[[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[24,26],[25,27],[26,28]];
+      conns.forEach(function(c){
+        var isR=[12,14,16,24,26,28].indexOf(c[0])!==-1;
+        ctx.beginPath();ctx.moveTo(pts[c[0]].x,pts[c[0]].y);ctx.lineTo(pts[c[1]].x,pts[c[1]].y);
+        ctx.strokeStyle=isR?'rgba(255,171,64,0.9)':'rgba(29,233,182,0.9)';
+        ctx.lineWidth=3;ctx.lineCap='round';ctx.stroke();
+      });
+
+      // Joints
+      [0,11,12,13,14,15,16,23,24,25,26,27,28].forEach(function(i){
+        var isR=[12,14,16,24,26,28].indexOf(i)!==-1;
+        ctx.beginPath();ctx.arc(pts[i].x,pts[i].y,6,0,Math.PI*2);
+        ctx.fillStyle=isR?'rgba(255,171,64,0.9)':'rgba(29,233,182,0.9)';ctx.fill();
+        ctx.strokeStyle='rgba(4,8,16,0.8)';ctx.lineWidth=2;ctx.stroke();
+      });
+
+      // Head
+      ctx.beginPath();ctx.arc(pts[0].x,pts[0].y-14,18,0,Math.PI*2);
+      ctx.strokeStyle='rgba(29,233,182,0.55)';ctx.lineWidth=2;ctx.stroke();
+
+      // Bounding box
+      var bpts=[0,11,12,23,24,27,28];
+      var mnX=Infinity,mxX=-Infinity,mnY=Infinity,mxY=-Infinity;
+      bpts.forEach(function(i){mnX=Math.min(mnX,pts[i].x);mxX=Math.max(mxX,pts[i].x);mnY=Math.min(mnY,pts[i].y);mxY=Math.max(mxY,pts[i].y);});
+      var pad=18;
+      ctx.strokeStyle='rgba(29,233,182,0.18)';ctx.lineWidth=1;ctx.setLineDash([5,4]);
+      ctx.strokeRect(mnX-pad,mnY-pad,(mxX-mnX)+pad*2,(mxY-mnY)+pad*2);ctx.setLineDash([]);
+      var bL=14;
+      [[mnX-pad,mnY-pad,1,1],[mxX+pad,mnY-pad,-1,1],[mnX-pad,mxY+pad,1,-1],[mxX+pad,mxY+pad,-1,-1]].forEach(function(c){
+        ctx.strokeStyle='rgba(29,233,182,0.8)';ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(c[0],c[1]+c[3]*bL);ctx.lineTo(c[0],c[1]);ctx.lineTo(c[0]+c[2]*bL,c[1]);ctx.stroke();
+      });
+
+      // Trunk sway line
+      var hipMidPt={x:(pts[23].x+pts[24].x)/2,y:(pts[23].y+pts[24].y)/2};
+      var shMidPt={x:(pts[11].x+pts[12].x)/2,y:(pts[11].y+pts[12].y)/2};
+      // Vertical reference
+      ctx.strokeStyle='rgba(255,255,255,0.12)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(hipMidPt.x,hipMidPt.y);ctx.lineTo(hipMidPt.x,pts[0].y-18);ctx.stroke();ctx.setLineDash([]);
+      // Actual spine
+      ctx.strokeStyle='rgba(255,82,82,0.45)';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(hipMidPt.x,hipMidPt.y);ctx.lineTo(shMidPt.x,shMidPt.y);ctx.stroke();
+
+      // Sway annotation
+      if(M.trunkLat>3){
+        ctx.fillStyle='rgba(255,82,82,0.8)';ctx.font='bold 11px IBM Plex Mono';
+        ctx.fillText('SWAY '+M.trunkLat.toFixed(1)+'°',shMidPt.x+20,shMidPt.y);
+      }
+
+      // Arm asymmetry annotation
+      var armSym=Math.min(M.armL,M.armR)/(Math.max(M.armL,M.armR)+0.001);
+      if(armSym<0.85){
+        ctx.fillStyle='rgba(255,171,64,0.85)';ctx.font='bold 10px IBM Plex Mono';
+        ctx.fillText('ARM ASYM '+(((1-armSym)*100).toFixed(0))+'%',(pts[11].x+pts[12].x)/2-45,pts[11].y-22);
+      }
+
+      // Shoulder level diff
+      if(M.shoulderDiff>2){
+        ctx.strokeStyle='rgba(68,138,255,0.4)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+        ctx.beginPath();ctx.moveTo(pts[11].x,pts[11].y);ctx.lineTo(pts[12].x,pts[11].y);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(pts[12].x,pts[11].y);ctx.lineTo(pts[12].x,pts[12].y);ctx.stroke();ctx.setLineDash([]);
+        ctx.fillStyle='rgba(68,138,255,0.7)';ctx.font='9px IBM Plex Mono';
+        ctx.fillText('ΔSH '+M.shoulderDiff.toFixed(1)+'%',pts[12].x+8,(pts[11].y+pts[12].y)/2);
+      }
+
+      // Sway arc in sway mode
+      if(assessMode==='sway'&&M.swayAmp>2){
+        ctx.strokeStyle='rgba(179,136,255,0.35)';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.arc(hipMidPt.x,hipMidPt.y,55,-Math.PI/2-M.swayAmp/30,-Math.PI/2+M.swayAmp/30);ctx.stroke();
+        ctx.fillStyle='rgba(179,136,255,0.7)';ctx.font='bold 10px IBM Plex Mono';
+        ctx.fillText('SWAY AMP '+M.swayAmp.toFixed(1),hipMidPt.x+60,hipMidPt.y);
+      }
+    }
+  }
+}
+draw();
+
+// ═══ MODE SWITCHING ═══
+function setMode(mode){
+  assessMode=mode;
+  var walkEl=document.getElementById('modeWalk'),swayEl=document.getElementById('modeSway');
+  var wDot=document.getElementById('modeWalkDot'),sDot=document.getElementById('modeSwayDot');
+  if(mode==='walk'){
+    walkEl.style.background='var(--tealG)';walkEl.style.borderColor='rgba(29,233,182,.2)';
+    swayEl.style.background='transparent';swayEl.style.borderColor='var(--bdr)';
+    wDot.style.background='var(--teal)';wDot.style.boxShadow='0 0 6px var(--teal)';
+    sDot.style.background='var(--tx3)';sDot.style.boxShadow='none';
+    document.querySelector('#modeWalk span').style.color='var(--teal)';
+    document.querySelector('#modeSway span').style.color='var(--tx3)';
+    showPrompt('WALK TOWARD CAMERA','Start ~8 feet back — walk toward camera naturally');
+  } else {
+    swayEl.style.background='var(--purpleG,rgba(179,136,255,.08))';swayEl.style.borderColor='rgba(179,136,255,.2)';
+    walkEl.style.background='transparent';walkEl.style.borderColor='var(--bdr)';
+    sDot.style.background='var(--purple)';sDot.style.boxShadow='0 0 6px var(--purple)';
+    wDot.style.background='var(--tx3)';wDot.style.boxShadow='none';
+    document.querySelector('#modeSway span').style.color='var(--purple)';
+    document.querySelector('#modeWalk span').style.color='var(--tx3)';
+    showPrompt('STAND STILL — SWAY ASSESSMENT','Stand at ~4 feet. Shift weight side to side. Rise on toes.',true);
+  }
+}
+document.getElementById('modeWalk').onclick=function(){setMode('walk');};
+document.getElementById('modeSway').onclick=function(){setMode('sway');};
+
+function showPrompt(main,sub,isPurple){
+  var pb=document.getElementById('promptBox');
+  document.getElementById('promptMain').textContent=main;
+  document.getElementById('promptMain').style.color=isPurple?'var(--purple)':'var(--teal)';
+  pb.style.borderColor=isPurple?'var(--purple)':'var(--teal)';
+  document.getElementById('promptSub').textContent=sub;
+  pb.style.display='block';
+  clearTimeout(showPrompt._t);
+  showPrompt._t=setTimeout(function(){pb.style.display='none';},4000);
+}
+
+// ═══ CAMERA ═══
+function startCamera(){
+  if(cameraStarted)return;
+  var btn=document.getElementById('startBtn');
+  btn.textContent='⟳ Loading MediaPipe…';btn.style.opacity='0.6';
+
+  holistic=new Holistic({locateFile:function(f){return'https://cdn.jsdelivr.net/npm/@mediapipe/holistic/'+f;}});
+  holistic.setOptions({modelComplexity:1,smoothLandmarks:true,enableSegmentation:false,refineFaceLandmarks:false,minDetectionConfidence:0.5,minTrackingConfidence:0.5});
+  holistic.onResults(onResults);
+
+  var camera=new Camera(vid,{
+    onFrame:async function(){if(holistic)await holistic.send({image:vid});},
+    width:1280,height:720
+  });
+  camera.start().then(function(){
+    cameraStarted=true;
+    btn.textContent='✓ Camera Active';
+    btn.style.background='var(--greenG)';btn.style.borderColor='var(--green)';btn.style.color='var(--green)';btn.style.opacity='1';
+    document.getElementById('statusDot').innerHTML='<div style="width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite"></div><span style="font-size:11px;color:var(--green);font-weight:600;font-family:var(--f)">Live</span>';
+    document.getElementById('noCamMsg').style.display='none';
+    showPrompt('WALK TOWARD CAMERA','Start ~8 feet back — walk directly toward camera');
+    setMode('walk');
+    // Auto-switch to sway after 15s
+    setTimeout(function(){if(cameraStarted)setMode('sway');},15000);
+  }).catch(function(){
+    btn.textContent='✕ Camera Error — Allow Access';btn.style.color='var(--red)';btn.style.borderColor='var(--red)';btn.style.opacity='1';
+  });
+}
+
+// ═══ PLAIN LANGUAGE PANEL ═══
+function plainMsg(icon,msg,color){
+  return '<div style="display:flex;gap:8px;margin-bottom:10px;align-items:flex-start">'+
+    '<span style="font-size:16px;flex-shrink:0">'+icon+'</span>'+
+    '<span style="font-size:11px;color:'+(color||'rgba(255,255,255,0.8)')+';line-height:1.6">'+msg+'</span></div>';
+}
+function renderPlain(){
+  var g=M, active=!!g.poseLandmarks;
+  var armSym=active?Math.min(g.armL,g.armR)/(Math.max(g.armL,g.armR)+0.001):0;
+  var msgs='<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:rgba(105,240,174,0.6);margin-bottom:10px;font-family:var(--m)">For the Patient & Family</div>';
+
+  if(!active){
+    msgs+=plainMsg('👋',"When you're ready, we'll watch how you walk and stand to make sure you're moving safely. Just walk toward the camera naturally — there's nothing to worry about.",'rgba(255,255,255,0.6)');
+  } else {
+    // Trunk sway
+    if(g.trunkLat>3){
+      msgs+=plainMsg(g.trunkLat>6?'⚠️':'✅',
+        g.trunkLat>6
+          ?"We're noticing a little more swaying than we'd like to see. This is important information for your care team — it just means they'll want to make sure you have good support when you're moving around."
+          :"Your posture looks steady. That's a good sign — keep moving at whatever pace feels comfortable for you.",
+        g.trunkLat>6?'rgba(255,171,64,0.9)':'rgba(105,240,174,0.9)');
+    }
+
+    // Arm swing
+    if(g.armL>0&&g.armR>0){
+      if(armSym<0.75){
+        msgs+=plainMsg('💪',"We noticed one arm isn't swinging quite as much as the other when you walk. This is helpful to know — your care team may want to look into some gentle exercises to help balance things out.",'rgba(255,171,64,0.9)');
+      } else {
+        msgs+=plainMsg('✅',"Your arm swing looks balanced on both sides. That's a really positive sign for your overall movement.",'rgba(105,240,174,0.9)');
+      }
+    }
+
+    // Knee
+    if(g.kneeL>0&&g.kneeR>0&&Math.abs(g.kneeL-g.kneeR)>15){
+      msgs+=plainMsg('🦵',"There's a small difference in how your knees are bending on each side. Don't be alarmed — this is exactly the kind of thing physical therapy can help with.",'rgba(255,171,64,0.9)');
+    }
+
+    // Sway mode
+    if(assessMode==='sway'&&g.swayAmp>0){
+      msgs+=plainMsg(g.swayAmp>8?'⚠️':'✅',
+        g.swayAmp>8
+          ?"While standing still, we're seeing a little more swaying than we'd like. This tells us your balance may need some extra support — please make sure someone is nearby when you stand up or walk."
+          :"Your balance while standing looks quite good. That's wonderful — keep it up!",
+        g.swayAmp>8?'rgba(255,130,130,0.9)':'rgba(105,240,174,0.9)');
+    }
+
+    // Fall risk
+    if(g.fallRisk){
+      if(g.fallRisk==='HIGH'){
+        msgs+=plainMsg('🚨',"Based on what we're seeing, there's a higher chance of a fall right now. Please don't be frightened — this is why we do this assessment. Your care team will put extra safety steps in place to keep you protected.",'rgba(255,130,130,0.95)');
+      } else if(g.fallRisk==='MED'){
+        msgs+=plainMsg('⚠️',"Your results show a moderate fall risk at the moment. Your care team is keeping a close eye on things and will make sure you have the support you need.",'rgba(255,171,64,0.9)');
+      } else if(g.fallRisk==='LOW'){
+        msgs+=plainMsg('💚',"Your fall risk looks low right now — that's really encouraging! Just keep using any walking aids your team has recommended and take your time.",'rgba(105,240,174,0.9)');
+      }
+    }
+
+    msgs+=plainMsg('❤️',"Remember, this assessment is here to help keep you safe and comfortable. Your care team reviews everything and is always here if you have questions.",'rgba(255,255,255,0.55)');
+  }
+  document.getElementById('rp-plain').innerHTML=msgs;
+}
+renderPlain();
+
+// ═══ RIGHT PANEL ═══
+function sr(l,v,f){return'<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:4px"><span style="color:var(--tx2)">'+l+'</span><span style="font-family:var(--m);font-weight:600;color:'+(v==='—'?'var(--tx3)':f?'var(--red)':'var(--tx)')+'">'+v+'</span></div>';}
+
+function renderRight(){
+  var g=M,active=!!g.poseLandmarks;
+  var armSym=active?Math.min(g.armL,g.armR)/(Math.max(g.armL,g.armR)+0.001):0;
+  document.getElementById('rp').innerHTML=`
+  <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--tx3);margin-bottom:8px">Live Metrics — Front View</div>
+
+  <div style="background:var(--s2);border-radius:9px;padding:10px;margin-bottom:7px;border:1px solid ${active?'var(--teal)':'var(--bdr)'}">
+    <div style="font-size:10px;font-weight:700;color:var(--blue);margin-bottom:5px">Trunk Sway</div>
+    <div style="height:3px;border-radius:2px;background:var(--s3);margin-bottom:6px;overflow:hidden"><div style="height:100%;border-radius:2px;background:${g.trunkLat>8?'var(--red)':'var(--teal)'};width:${active?Math.min(100,g.trunkLat*5)+'%':'0%'};transition:width .3s"></div></div>
+    ${sr('Lateral Sway',active?g.trunkLat.toFixed(1)+'°':'—',active&&g.trunkLat>6)}
+    ${sr('Shoulder Δ',active?g.shoulderDiff.toFixed(1)+'%':'—',active&&g.shoulderDiff>3)}
+    ${sr('Sway Amplitude',active&&assessMode==='sway'?g.swayAmp.toFixed(1):'—',active&&g.swayAmp>8)}
+  </div>
+
+  <div style="background:var(--s2);border-radius:9px;padding:10px;margin-bottom:7px;border:1px solid var(--bdr)">
+    <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+      <span style="font-size:10px;font-weight:700;color:var(--purple)">Arm Swing</span>
+      <span style="font-family:var(--m);font-size:13px;font-weight:800;color:${active&&armSym<0.85?'var(--red)':'var(--tx3)'}">${active?(armSym*100).toFixed(0)+'%':'—'}</span>
+    </div>
+    <div style="height:3px;border-radius:2px;background:var(--s3);margin-bottom:6px;overflow:hidden"><div style="height:100%;border-radius:2px;background:${active&&armSym<0.85?'var(--amber)':'var(--green)'};width:${active?armSym*100+'%':'0%'};transition:width .3s"></div></div>
+    ${sr('Arm Swing L',active?g.armL.toFixed(0)+'°':'—',false)}
+    ${sr('Arm Swing R',active?g.armR.toFixed(0)+'°':'—',active&&g.armR<g.armL*0.75)}
+    ${sr('Symmetry',active?(armSym*100).toFixed(0)+'%':'—',active&&armSym<0.85)}
+  </div>
+
+  <div style="background:var(--s2);border-radius:9px;padding:10px;margin-bottom:7px;border:1px solid var(--bdr)">
+    <div style="font-size:10px;font-weight:700;color:var(--amber);margin-bottom:5px">Knee Flexion</div>
+    ${sr('Knee Flex L',active?g.kneeL.toFixed(0)+'°':'—',false)}
+    ${sr('Knee Flex R',active?g.kneeR.toFixed(0)+'°':'—',active&&Math.abs(g.kneeL-g.kneeR)>15)}
+    ${sr('Bilateral Δ',active?Math.abs(g.kneeL-g.kneeR).toFixed(0)+'°':'—',active&&Math.abs(g.kneeL-g.kneeR)>15)}
+  </div>
+
+  <div style="background:var(--s2);border-radius:9px;padding:10px;border:1px solid ${active&&g.fallRisk==='HIGH'?'rgba(255,82,82,.35)':active&&g.fallRisk==='MED'?'rgba(255,171,64,.25)':'var(--bdr)'}">
+    <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+      <span style="font-size:10px;font-weight:700;color:var(--red)">Fall Risk</span>
+      <span style="font-family:var(--m);font-size:18px;font-weight:800;color:${active?(g.fallRisk==='HIGH'?'var(--red)':g.fallRisk==='MED'?'var(--amber)':'var(--green)'):'var(--tx3)'}">${active?g.fallRisk:'—'}</span>
+    </div>
+    <div style="height:3px;border-radius:2px;background:var(--s3);margin-bottom:6px;overflow:hidden"><div style="height:100%;border-radius:2px;background:${g.fallRisk==='HIGH'?'var(--red)':g.fallRisk==='MED'?'var(--amber)':'var(--green)'};width:${active?g.score+'%':'0%'};transition:width .3s"></div></div>
+    ${sr('Composite Score',active?g.score+'/100':'—',active&&g.score>60)}
+    ${sr('Mode',assessMode==='walk'?'Walk Approach':'Sway Stand',false)}
+    ${sr('Frames',active?g.frameCount:'—',false)}
+    ${sr('FPS',active?g.fps:'—',false)}
+  </div>
+  <div style="margin-top:8px;padding:8px;background:var(--tealG);border-radius:7px;border:1px solid rgba(29,233,182,.1);font-size:8px;color:var(--tx3);font-family:var(--m);line-height:1.6">
+    💡 Try limping, drooping one shoulder, or reducing one arm swing — watch the asymmetry detection respond in real-time
+  </div>`;
+}
+renderRight();renderPlain();
+</script>
+</body>
+</html>
