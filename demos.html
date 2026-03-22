@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>NeuroCheck AI — Live Demos</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+--bg:#060a11;--s1:#0c1220;--s2:#131c2e;--s3:#1a2640;
+--bdr:#1e2d45;--tx:#e8ecf4;--tx2:#8e9bb8;--tx3:#5a6a85;
+--teal:#1de9b6;--teal2:#00bfa5;--tealG:rgba(29,233,182,.08);
+--red:#ff5252;--redG:rgba(255,82,82,.1);
+--amber:#ffab40;--amberG:rgba(255,171,64,.1);
+--blue:#448aff;--blueG:rgba(68,138,255,.1);
+--green:#69f0ae;--greenG:rgba(105,240,174,.1);
+--purple:#b388ff;--purpleG:rgba(179,136,255,.1);
+--f:'DM Sans',system-ui,sans-serif;--m:'IBM Plex Mono',monospace;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--tx);font-family:var(--f);-webkit-font-smoothing:antialiased}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(29,233,182,.15)}50%{box-shadow:0 0 40px rgba(29,233,182,.3)}}
+
+/* Password screen */
+#lock{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:24px}
+.lock-logo{width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,var(--teal2),var(--teal));display:flex;align-items:center;justify-content:center;font-weight:900;font-size:28px;color:#000;margin-bottom:8px}
+.lock-title{font-size:28px;font-weight:800;letter-spacing:-.5px}
+.lock-sub{font-size:14px;color:var(--tx3);font-family:var(--m)}
+.lock-box{background:var(--s1);border:1px solid var(--bdr);border-radius:16px;padding:32px;width:100%;max-width:380px;display:flex;flex-direction:column;gap:16px}
+.lock-input{background:var(--s2);border:1px solid var(--bdr);border-radius:10px;padding:14px 16px;font-size:16px;color:var(--tx);font-family:var(--m);width:100%;outline:none;letter-spacing:3px;transition:border-color .2s}
+.lock-input:focus{border-color:var(--teal)}
+.lock-btn{background:linear-gradient(135deg,var(--teal2),var(--teal));border:none;border-radius:10px;padding:14px;font-size:14px;font-weight:700;color:#000;cursor:pointer;font-family:var(--f);transition:opacity .2s}
+.lock-btn:hover{opacity:.9}
+.lock-err{font-size:12px;color:var(--red);font-family:var(--m);text-align:center;min-height:16px}
+
+/* Main content */
+#main{display:none}
+nav{position:sticky;top:0;z-index:50;background:rgba(6,10,17,.92);border-bottom:1px solid var(--bdr);backdrop-filter:blur(16px);padding:0 32px;height:64px;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{display:flex;align-items:center;gap:12px}
+.nav-logo-icon{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--teal2),var(--teal));display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;color:#000}
+.shimmer-text{background:linear-gradient(90deg,var(--teal),var(--blue),var(--purple),var(--teal));background-size:300% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 5s linear infinite}
+
+/* Hero */
+.hero{padding:80px 32px 60px;text-align:center;max-width:900px;margin:0 auto}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:var(--tealG);border:1px solid rgba(29,233,182,.2);border-radius:20px;padding:6px 16px;font-size:11px;font-weight:700;color:var(--teal);font-family:var(--m);letter-spacing:1px;margin-bottom:24px}
+.hero h1{font-size:clamp(32px,5vw,56px);font-weight:900;letter-spacing:-1.5px;line-height:1.1;margin-bottom:16px}
+.hero p{font-size:17px;color:var(--tx2);max-width:620px;margin:0 auto 40px;line-height:1.7}
+
+/* Demo grid */
+.demos{padding:0 32px 80px;max-width:1200px;margin:0 auto}
+.section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--tx3);margin-bottom:20px;font-family:var(--m)}
+
+.demo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px;margin-bottom:48px}
+
+.demo-card{background:var(--s1);border:1px solid var(--bdr);border-radius:18px;overflow:hidden;transition:all .3s;cursor:pointer;text-decoration:none;display:block;animation:fadeIn .5s ease both}
+.demo-card:hover{transform:translateY(-4px);border-color:var(--accent);box-shadow:0 20px 60px rgba(0,0,0,.4)}
+
+.card-header{padding:24px 24px 20px;border-bottom:1px solid var(--bdr);position:relative}
+.card-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:14px}
+.card-tag{position:absolute;top:20px;right:20px;font-size:9px;font-weight:700;font-family:var(--m);padding:3px 8px;border-radius:5px;text-transform:uppercase;letter-spacing:1px}
+.card-title{font-size:18px;font-weight:800;letter-spacing:-.3px;margin-bottom:6px}
+.card-sub{font-size:12px;color:var(--tx3);font-family:var(--m)}
+
+.card-body{padding:20px 24px}
+.card-desc{font-size:13px;color:var(--tx2);line-height:1.7;margin-bottom:16px}
+.card-features{display:flex;flex-direction:column;gap:6px;margin-bottom:20px}
+.card-feat{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tx2)}
+.card-feat-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+
+.card-footer{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-top:1px solid var(--bdr);background:rgba(0,0,0,.2)}
+.card-cta{font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px}
+.card-status{display:flex;align-items:center;gap:5px;font-size:10px;font-family:var(--m)}
+
+/* Featured card */
+.demo-card.featured{border-color:rgba(29,233,182,.25);animation:glow 3s ease-in-out infinite}
+
+/* Pipeline */
+.pipeline{background:var(--s1);border:1px solid var(--bdr);border-radius:16px;padding:24px;margin-bottom:32px}
+.pipe-items{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pipe-item{padding:8px 14px;border-radius:8px;background:var(--tealG);border:1px solid rgba(29,233,182,.15);font-size:10px;font-weight:600;color:var(--teal);font-family:var(--m)}
+.pipe-arrow{color:var(--teal);font-size:16px}
+
+footer{padding:32px;border-top:1px solid var(--bdr);text-align:center}
+</style>
+</head>
+<body>
+
+<!-- PASSWORD SCREEN -->
+<div id="lock">
+  <div class="lock-logo">N</div>
+  <div class="lock-title">NeuroCheck<span style="color:var(--teal)">AI</span></div>
+  <div class="lock-sub">DEMO ACCESS — AUTHORIZED PERSONNEL ONLY</div>
+  <div class="lock-box">
+    <div style="font-size:13px;color:var(--tx2);text-align:center;line-height:1.6">These interactive demos contain clinical AI technology under patent. Access is restricted to authorized clinical and investor partners.</div>
+    <input class="lock-input" id="pwInput" type="password" placeholder="Enter access code" autocomplete="off"
+      onkeydown="if(event.key==='Enter')checkPw()"/>
+    <button class="lock-btn" onclick="checkPw()">Access Demos →</button>
+    <div class="lock-err" id="pwErr"></div>
+    <div style="font-size:10px;color:var(--tx3);text-align:center;font-family:var(--m)">Contact Rich@neurocheckai.com for access</div>
+  </div>
+</div>
+
+<!-- MAIN DEMOS PAGE -->
+<div id="main">
+<nav>
+  <div class="nav-logo">
+    <div class="nav-logo-icon">N</div>
+    <span style="font-weight:800;font-size:16px;letter-spacing:-.3px">NeuroCheck<span class="shimmer-text">AI</span></span>
+    <span style="font-family:var(--m);font-size:10px;background:var(--tealG);color:var(--teal);padding:3px 10px;border-radius:6px;border:1px solid rgba(29,233,182,.2);font-weight:600">LIVE DEMOS</span>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <a href="https://neurocheckai.com" style="padding:8px 16px;border-radius:8px;border:1px solid var(--bdr);color:var(--tx2);font-size:13px;font-weight:600;text-decoration:none">← neurocheckai.com</a>
+    <span style="font-family:var(--m);font-size:9px;color:var(--tx3)">Patent: AI Assessment + Continuous Monitoring</span>
+    <div style="display:flex;align-items:center;gap:5px">
+      <div style="width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite"></div>
+      <span style="font-size:12px;color:var(--green);font-weight:600">Live</span>
+    </div>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-badge">
+    <div style="width:6px;height:6px;border-radius:50%;background:var(--teal);animation:pulse 1.5s infinite"></div>
+    INTERACTIVE CLINICAL DEMOS
+  </div>
+  <h1>See <span class="shimmer-text">NeuroCheckAI</span><br>In Action</h1>
+  <p>Five live demos showcasing AI-powered neurological assessment, cranial nerve testing, delirium detection, and gait analysis — powered by MediaPipe Holistic, CNN/LSTM deep neural networks, and real-time computer vision.</p>
+</div>
+
+<div class="demos">
+
+  <div class="section-label">Cranial Nerve &amp; Clinical Assessment</div>
+  <div class="demo-grid">
+
+    <!-- Prototype -->
+    <a href="neurocheck-prototype.html" class="demo-card featured" style="--accent:var(--teal);animation-delay:.0s">
+      <div class="card-header">
+        <div class="card-icon" style="background:var(--tealG);border:1px solid rgba(29,233,182,.2)">🧠</div>
+        <div class="card-tag" style="background:var(--tealG);color:var(--teal);border:1px solid rgba(29,233,182,.2)">START HERE</div>
+        <div class="card-title">Full Clinical Prototype</div>
+        <div class="card-sub">CN II–XII &bull; GCS &bull; CAM-ICU-7 &bull; Frailty</div>
+      </div>
+      <div class="card-body">
+        <div class="card-desc">The flagship demo. Three-screen clinical interface with live CN II–XII assessment on an elderly ICU patient, real-time scoring, clinical alert firing, and patient history with trend charts.</div>
+        <div class="card-features">
+          <div class="card-feat"><div class="card-feat-dot" style="background:var(--teal)"></div>Live CN II–XII cranial nerve assessment</div>
+          <div class="card-feat"><div class="card-feat-dot" style="background:var(--teal)"></div>GCS, CAM-ICU-7 delirium, frailty scoring</div>
+          <div class="card-feat"><div class="card-feat-dot" style="background:var(--teal)"></div>Clinical alerts with recommended actions</div>
+          <div class="card-feat"><div class="card-feat-dot" style="background:var(--teal)"></div>Patient history &amp; trend charts</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="card-cta" style="color:var(--teal)">Open Demo <span>→</span></div>
+        <div class="card-status"><div style="width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite"></div><span style="color:var(--green)">Live &bull; Auto-runs</span></div>
+      </div>
+    </a>
+
+    <!-- Webcam CN -->
+    <a href="neurocheck-demo.html" class="demo-card" style="--accent:var(--blue);animation-delay:.1s">
+      <div class="card-header">
+        <div class="card-icon" style="background:var(--blueG);border:1px solid rgba(68,138,255,.2)">📷</div>
+        <div class="card-tag" style="background:var(--blueG);color:var(--blue);border:1px solid rgba(68,138,255,.2)">LIVE WEBCAM</div>
+        <div class="card-title">Live Webcam CN Demo</div>
+        <div class="card-sub">Your face &bull; Real-time tracking &bull; 468 landmarks</div>
+      </div>
+      <div class="card-body">
+        <div class="card-desc">Uses your webcam to track your own face. Follow the on-screen prompts — the AI overlays and landmark tracking run on you in real-time. Same scoring panels as the prototype.</div>
+        <div class="card-features">
+          <div class="card-feat"><div class="card-feat-dot" style="background:var(--blue)"></div>468-point facial landmark tracking</div>
+          <div class="card-feat"><div class="card-feat-dot" style="background:var(--blue)"></div>Real-time AI overlays on your face</div>
+          <div class="card-feat"><div class="card-feat-dot" style="background:var(--blue)"></div>Live CN II–XII prompt sequence</div>
+          <div class="card-feat"><div class="card-feat-dot" style="background:var(--blue)"></div>Requires Chrome + camera permission</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="card-cta" style="color:var(--blue)">Open Demo <span>→</span></div>
+        <div class="card-status"><div style="width:6px;height:6px;border-radius:50%;background:var(--blue)"></div><span style="color:var(--blue)">Requires Camera</span></div>
+      </div>
+    </a>
+
+    <!-- AI Patient -->
+    <a href="neurocheck-ai-demo.html" class="demo-card" style="--accent:var(--purple);animation-delay:.2s">
+      <div class="card-header">
+        <div class="card-icon" style="background:var(--purpleG);border:1px solid rgba(179,136,255,.2)">🤖</div>
+        <div class="card-tag" style="background:var(--purpleG);color:var(--purple);border:1px solid rgba(179,136,255,.2)">SELF-RUNNING</div>
+        <div class="card-title">AI Patient Demo</div>
+        <div class="card-sub">Standalone &bull; Auto-runs &bull; PredictWell pipeline</div>
+      </div>
+      <div class="card-body">
+        <div class="card-desc">Standalone version — just open and watch. Full assessment sequence with PredictWell CommandOS integration pipeline. Good for a quick walkthrough with no interaction required.</div>
+        <div class="card-features">
+          <div class="card-feat"><div class="card-feat-dot" style="background:var(--purple)"></div>Fully autonomous — no interaction needed</div>
+          <div class="card-feat"><div class="card-feat-dot" style="background:var(--purple)"></div>PredictWell CommandOS pipeline</div>
+          <div class="card-feat"><div class="card-feat-dot" style="background:var(--purple)"></div>Complete assessment sequence</div>
+          <div class="card-feat"><div class="card-feat-dot" style="background:var(--purple)"></div>Great for screen sharing in meetings</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="card-cta" style="color:var(--purple)">Open Demo <span>→</span></div>
+        <div class="card-status"><div style="width:6px;height:6px;border-radius:50%;background:var(--purple)"></div><span style="color:var(--purple)">Auto-Runs</span></div>
+      </div>
+    </a>
+
+  </div>
+
+  <div class="section-label">Gait Analysis — Powered by MediaPipe Holistic 33-Point Body Tracking</div>
+  <div class="demo-grid">
+
+    <!-- Gait AI -->
+    <a href="neurocheck-gait-demo.html" class="demo-card featured" style="--accent:var(--amber);animation-delay:.3s">
+      <div class="card-header">
+        <div class="card-icon" style="background:var(--amberG);border:1px solid rgba(255,171,64,.2)">🦿</div>
+        <div class="card-tag" style="background:var(--amberG);color:var(--amber);border:1px solid rgba(255,171,64,.2)">NEW</div>
+        <div class="card-title">AI Gait Analysis Demo</div>
+        <div class="card-sub">Dorothy Vasquez &bull; Post-op SDH Day 4 &bull; Fall Risk</div>
+      </div>
+      <div class="card-body">
+        <div class="card-desc">Simulated gait analysis of a post-bilateral SDH patient. Demonstrates 33-point body tracking, stride asymmetry detection, trunk sway, arm swing reduction, and fall risk composite scoring.</div>
+        <div class="card-features">
+          <div class="card-feat"><div class="card-feat-dot" style="background:var(--amber)"></div>Stride symmetry — L vs R detection</div>
+          <div class="card-feat"><div class="card-feat-dot" style="background:var(--amber)"></div>Trunk sway (lateral + AP)</div>
+          <div class="card-feat"><div class="card-feat-dot" style="background:var(--amber)"></div>Arm swing asymmetry &amp; foot clearance</div>
+          <div class="card-feat"><div class="card-feat-dot" style="background:var(--amber)"></div>TUG, Berg Balance, Hopkins Fall Risk</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="card-cta" style="color:var(--amber)">Open Demo <span>→</span></div>
+        <div class="card-status"><div style="width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite"></div><span style="color:var(--green)">Live &bull; Auto-runs</span></div>
+      </div>
+    </a>
+
+    <!-- Gait Webcam -->
+    <a href="neurocheck-gait-webcam.html" class="demo-card" style="--accent:var(--green);animation-delay:.4s">
+      <div class="card-header">
+        <div class="card-icon" style="background:var(--greenG);border:1px solid rgba(105,240,174,.2)">🎥</div>
+        <div class="card-tag" style="background:var(--greenG);color:var(--green);border:1px solid rgba(105,240,174,.2)">LIVE WEBCAM</div>
+        <div class="card-title">Live Gait Webcam</div>
+        <div class="card-sub">Your body &bull; 33-point tracking &bull; Real-time metrics</div>
+      </div>
+      <div class="card-body">
+        <div class="card-desc">Point your camera at yourself walking. The AI tracks your full body with 33 landmarks and scores your gait in real-time. Try limping or exaggerating asymmetry to see detection fire instantly.</div>
+        <div class="card-features">
+          <div class="card-feat"><div class="card-feat-dot" style="background:var(--green)"></div>MediaPipe Holistic — same as SwingCheck AI</div>
+          <div class="card-feat"><div class="card-feat-dot" style="background:var(--green)"></div>Live arm swing, knee flex, trunk sway</div>
+          <div class="card-feat"><div class="card-feat-dot" style="background:var(--green)"></div>Instant fall risk composite scoring</div>
+          <div class="card-feat"><div class="card-feat-dot" style="background:var(--green)"></div>Side view recommended for best results</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="card-cta" style="color:var(--green)">Open Demo <span>→</span></div>
+        <div class="card-status"><div style="width:6px;height:6px;border-radius:50%;background:var(--green)"></div><span style="color:var(--green)">Requires Camera</span></div>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- Pipeline -->
+  <div class="pipeline">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--tx3);margin-bottom:16px;font-family:var(--m)">PredictWell CommandOS Pipeline</div>
+    <div class="pipe-items">
+      <div class="pipe-item">Multi-Camera Capture</div><div class="pipe-arrow">→</div>
+      <div class="pipe-item">MediaPipe Holistic</div><div class="pipe-arrow">→</div>
+      <div class="pipe-item">CNN + LSTM Analysis</div><div class="pipe-arrow">→</div>
+      <div class="pipe-item">Assessment Scoring</div><div class="pipe-arrow">→</div>
+      <div class="pipe-item">CommandOS</div><div class="pipe-arrow">→</div>
+      <div class="pipe-item">EHR (HL7 FHIR R4)</div><div class="pipe-arrow">→</div>
+      <div class="pipe-item">UPI Longitudinal DB</div>
+    </div>
+  </div>
+
+  <!-- Bottom CTA -->
+  <div style="text-align:center;padding:20px 0">
+    <div style="font-size:13px;color:var(--tx3);margin-bottom:16px;font-family:var(--m)">Questions about the technology or a clinical pilot?</div>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <a href="mailto:Rich@neurocheckai.com" style="padding:12px 24px;border-radius:10px;background:var(--tealG);border:1px solid rgba(29,233,182,.3);color:var(--teal);font-size:13px;font-weight:700;text-decoration:none">Rich@neurocheckai.com</a>
+      <a href="https://neurocheckai.com#contact" style="padding:12px 24px;border-radius:10px;background:var(--s1);border:1px solid var(--bdr);color:var(--tx2);font-size:13px;font-weight:700;text-decoration:none">Request Clinical Pilot →</a>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <div style="font-size:11px;color:var(--tx3);font-family:var(--m)">NeuroCheck AI &bull; www.neurocheckai.com &bull; Patent: AI-Based Assessment + Continuous Monitoring</div>
+</footer>
+</div>
+
+<script>
+// Password check — change "neurocheck2025" to whatever you want
+var PASS='neurocheck2025';
+var SESSION_KEY='nc_demo_access';
+
+function checkPw(){
+  var val=document.getElementById('pwInput').value.trim();
+  if(val===PASS){
+    sessionStorage.setItem(SESSION_KEY,'1');
+    document.getElementById('lock').style.display='none';
+    document.getElementById('main').style.display='block';
+  } else {
+    document.getElementById('pwErr').textContent='Incorrect access code. Contact Rich@neurocheckai.com';
+    document.getElementById('pwInput').value='';
+    document.getElementById('pwInput').style.borderColor='var(--red)';
+    setTimeout(function(){document.getElementById('pwInput').style.borderColor='var(--bdr)';},2000);
+  }
+}
+
+// Auto-unlock if already authenticated this session
+if(sessionStorage.getItem(SESSION_KEY)==='1'){
+  document.getElementById('lock').style.display='none';
+  document.getElementById('main').style.display='block';
+}
+
+// Allow Enter key
+document.getElementById('pwInput').addEventListener('keydown',function(e){if(e.key==='Enter')checkPw();});
+</script>
+</body>
+</html>
